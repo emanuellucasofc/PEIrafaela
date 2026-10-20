@@ -27,6 +27,7 @@
         selCrianca: $('selCrianca'),
         selQuadro: $('selQuadro'),
         btnNovo: $('btnNovoQuadro'),
+        btnDuplicar: $('btnDuplicarQuadro'),
         btnExcluir: $('btnExcluirQuadro'),
         btnSalvar: $('btnSalvar'),
         btnImprimir: $('btnImprimir'),
@@ -49,6 +50,7 @@
         modalStatus: $('modalStatus'),
         contexto: $('contextoPrograma'),
         selecionados: $('selecionados'),
+        btnAutoPreencherModal: $('btnAutoPreencherModal'),
         busca: $('buscaItem'),
         lista: $('listaItens'),
         quickAdd: $('quickAdd'),
@@ -229,6 +231,7 @@
             }
         }
         const setVisiveis = new Set(visiveis);
+        const primeiraVisivel = visiveis.length ? visiveis[0] : -1;
         const ultimaVisivel = visiveis.length ? visiveis[visiveis.length - 1] : -1;
 
         els.grid.querySelectorAll('.cell').forEach(el => {
@@ -237,6 +240,12 @@
             el.hidden = !visivel;
             if (el.classList.contains('cell-pink')) {
                 el.classList.toggle('col-last', col === ultimaVisivel);
+            }
+            if (el.classList.contains('cell-programa') && visivel) {
+                const btnEsq = el.querySelector('[data-mover-dir="-1"]');
+                const btnDir = el.querySelector('[data-mover-dir="1"]');
+                if (btnEsq) btnEsq.disabled = col === primeiraVisivel;
+                if (btnDir) btnDir.disabled = col === ultimaVisivel;
             }
         });
 
@@ -276,9 +285,19 @@
             const cor = c.corCabecalho || PALETA[col];
             bloco.style.background = cor;
             bloco.classList.toggle('texto-escuro', corClara(cor));
-            const btnRemoverCol = `<button type="button" class="programa-remove no-print" data-remover-coluna="${col}" title="Excluir este programa do quadro" aria-label="Excluir programa da coluna ${col + 1}">&times;</button>`;
+            const barraAcoes = `
+                <div class="programa-actions no-print">
+                    <span class="programa-actions-group">
+                        <button type="button" class="programa-btn" data-mover-coluna="${col}" data-mover-dir="-1" title="Mover programa para a esquerda" aria-label="Mover coluna ${col + 1} para a esquerda">&#9664;</button>
+                        <button type="button" class="programa-btn" data-mover-coluna="${col}" data-mover-dir="1" title="Mover programa para a direita" aria-label="Mover coluna ${col + 1} para a direita">&#9654;</button>
+                    </span>
+                    <span class="programa-actions-group">
+                        <button type="button" class="programa-btn" data-autopreencher-coluna="${col}" title="Auto-preencher recursos e atividades vinculados a este programa" aria-label="Auto-preencher coluna ${col + 1}">&#9889;</button>
+                        <button type="button" class="programa-remove" data-remover-coluna="${col}" title="Excluir este programa do quadro" aria-label="Excluir programa da coluna ${col + 1}">&times;</button>
+                    </span>
+                </div>`;
             bloco.innerHTML = (itens.length || texto)
-                ? btnRemoverCol + itens.map(i => `<span class="programa-titulo">${esc(i.titulo)}</span>`).join('') + texto
+                ? barraAcoes + itens.map(i => `<span class="programa-titulo">${esc(i.titulo)}</span>`).join('') + texto
                 : '';
         } else {
             el.querySelector('.cell-content').innerHTML =
@@ -323,6 +342,131 @@
         c.itensSelecionados = c.itensSelecionados.filter(i => i.id !== itemId);
         renderCelula(linha, col);
         salvarCelula(linha, col);
+    }
+
+    function moverColuna(col, direcao) {
+        const total = CFG.totalColunas || 11;
+        const visiveis = [];
+        for (let i = 0; i < total; i++) {
+            if (colunaTemPrograma(i)) visiveis.push(i);
+        }
+        const pos = visiveis.indexOf(col);
+        const alvoPos = pos + direcao;
+        if (pos === -1 || alvoPos < 0 || alvoPos >= visiveis.length) return;
+        const colAlvo = visiveis[alvoPos];
+
+        const todasLinhas = ['PROGRAMA', 'RECURSO', 'ATIVIDADE', 'PREFERENCIA', 'OBSERVACAO'];
+        todasLinhas.forEach(l => {
+            const cA = getCelula(l, col);
+            const cB = getCelula(l, colAlvo);
+            const tmpItens = cA.itensSelecionados;
+            const tmpTexto = cA.textoLivre;
+            cA.itensSelecionados = cB.itensSelecionados;
+            cA.textoLivre = cB.textoLivre;
+            cB.itensSelecionados = tmpItens;
+            cB.textoLivre = tmpTexto;
+            renderCelula(l, col);
+            renderCelula(l, colAlvo);
+            salvarCelula(l, col);
+            salvarCelula(l, colAlvo);
+        });
+        atualizarColunasVisiveis();
+    }
+
+    async function autoPreencherColuna(col, silencioso) {
+        const progs = programasDaColuna(col);
+        if (!progs || !progs.length) {
+            if (!silencioso) toast('Selecione um programa nesta coluna primeiro.', 'erro');
+            return 0;
+        }
+        try {
+            const qs = progs.map(p => `programaId=${encodeURIComponent(p.id)}`).join('&');
+            const [recursos, atividades] = await Promise.all([
+                api.get(`/api/catalogo?categoria=RECURSO&${qs}`),
+                api.get(`/api/catalogo?categoria=ATIVIDADE&${qs}`)
+            ]);
+            const recSugeridos = recursos.filter(i => i.sugerido);
+            const atvSugeridas = atividades.filter(i => i.sugerido);
+
+            let adicionados = 0;
+            if (recSugeridos.length) {
+                const cRec = getCelula('RECURSO', col);
+                const ids = new Set((cRec.itensSelecionados || []).map(i => i.id));
+                recSugeridos.forEach(item => {
+                    if (!ids.has(item.id)) {
+                        cRec.itensSelecionados.push(item);
+                        adicionados++;
+                    }
+                });
+                renderCelula('RECURSO', col);
+                salvarCelula('RECURSO', col);
+            }
+            if (atvSugeridas.length) {
+                const cAtv = getCelula('ATIVIDADE', col);
+                const ids = new Set((cAtv.itensSelecionados || []).map(i => i.id));
+                atvSugeridas.forEach(item => {
+                    if (!ids.has(item.id)) {
+                        cAtv.itensSelecionados.push(item);
+                        adicionados++;
+                    }
+                });
+                renderCelula('ATIVIDADE', col);
+                salvarCelula('ATIVIDADE', col);
+            }
+
+            if (!silencioso) {
+                if (adicionados > 0) {
+                    toast(`${adicionados} item(ns) sugerido(s) preenchido(s) na Coluna ${col + 1}!`, 'sucesso');
+                } else {
+                    toast('Todos os recursos e atividades sugeridos deste programa já estão na coluna.', 'sucesso');
+                }
+            }
+            return adicionados;
+        } catch (e) {
+            if (!silencioso) toast('Erro ao auto-preencher: ' + e.message, 'erro');
+            return 0;
+        }
+    }
+
+    async function autoPreencherNoModal() {
+        if (modal.linha === 'PROGRAMA') {
+            const cols = [...new Set(modal.colunasAlocadas.values())];
+            if (!cols.length) {
+                toast('Marque ao menos um programa para auto-preencher.', 'erro');
+                return;
+            }
+            let totalAdicionados = 0;
+            for (const cIdx of cols) {
+                totalAdicionados += await autoPreencherColuna(cIdx, true);
+            }
+            toast(
+                totalAdicionados > 0
+                    ? `Recursos e atividades sugeridos preenchidos (${totalAdicionados} item(ns))!`
+                    : 'Os recursos e atividades sugeridos já estavam preenchidos.',
+                'sucesso'
+            );
+            return;
+        }
+
+        if (ACEITA_VINCULO.has(modal.linha)) {
+            const sugeridos = modal.itens.filter(i => i.sugerido);
+            if (!sugeridos.length) {
+                toast('Nenhum item sugerido vinculado ao programa desta coluna.', 'erro');
+                return;
+            }
+            const c = getCelula(modal.linha, modal.col);
+            const ids = new Set(c.itensSelecionados.map(i => i.id));
+            let novos = 0;
+            sugeridos.forEach(item => {
+                if (!ids.has(item.id)) {
+                    c.itensSelecionados.push(item);
+                    novos++;
+                }
+            });
+            renderLista();
+            alterou(true);
+            toast(novos > 0 ? `${novos} item(ns) sugerido(s) marcado(s)!` : 'Todos os sugeridos já estão marcados.', 'sucesso');
+        }
     }
 
     function flash(linha, col) {
@@ -468,6 +612,13 @@
         if (opt) opt.textContent = rotuloOpcaoQuadro(q);
     }
 
+    function somarDiasIso(iso, dias) {
+        if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+        const [y, m, d] = iso.split('-').map(Number);
+        const dt = new Date(Date.UTC(y, m - 1, d + dias));
+        return dt.toISOString().slice(0, 10);
+    }
+
     async function novoQuadro() {
         const criancaId = els.selCrianca.value;
         if (!criancaId) return;
@@ -479,6 +630,41 @@
             els.titulo.select();
         } catch (e) {
             toast(e.message, 'erro');
+        }
+    }
+
+    async function duplicarQuadroAtual() {
+        if (!state.quadro) return;
+        const criancaId = els.selCrianca.value;
+        if (!criancaId) return;
+        try {
+            if (els.btnDuplicar) els.btnDuplicar.disabled = true;
+            setStatus('Duplicando…', 'saving');
+            const baseTitulo = limparTituloPadrao(els.titulo.value.trim() || state.quadro.titulo);
+            const diAtual = els.dataInicio && els.dataInicio.value ? els.dataInicio.value : state.quadro.dataInicio;
+            const dfAtual = els.dataFim && els.dataFim.value ? els.dataFim.value : state.quadro.dataFim;
+            const novaDataInicio = somarDiasIso(diAtual, 7);
+            const novaDataFim = somarDiasIso(dfAtual, 7);
+
+            const criado = await api.post(`/api/quadros?criancaId=${encodeURIComponent(criancaId)}&titulo=${encodeURIComponent(baseTitulo)}`);
+            await api.put(`/api/quadros/${criado.id}`, {
+                titulo: baseTitulo,
+                dataInicio: novaDataInicio,
+                dataFim: novaDataFim,
+                celulas: Array.from(state.celulas.values()).map(payloadCelula)
+            });
+            await carregarCrianca(criancaId, criado.id);
+            toast(
+                novaDataInicio || novaDataFim
+                    ? 'Quadro duplicado com datas avançadas em +7 dias (próxima semana)!'
+                    : 'Quadro duplicado com sucesso! Defina o novo período.',
+                'sucesso'
+            );
+        } catch (e) {
+            setStatus('Erro ao duplicar', 'error');
+            toast(e.message, 'erro');
+        } finally {
+            if (els.btnDuplicar) els.btnDuplicar.disabled = false;
         }
     }
 
@@ -692,6 +878,18 @@
     }
 
     function renderSelecionados() {
+        if (els.btnAutoPreencherModal) {
+            if (modal.linha === 'PROGRAMA') {
+                els.btnAutoPreencherModal.hidden = modal.colunasAlocadas.size === 0;
+                els.btnAutoPreencherModal.textContent = '⚡ Auto-preencher recursos e atividades sugeridos';
+            } else if (ACEITA_VINCULO.has(modal.linha)) {
+                const temProg = programasDaColuna(modal.col).length > 0;
+                els.btnAutoPreencherModal.hidden = !temProg;
+                els.btnAutoPreencherModal.textContent = '⚡ Marcar todos os sugeridos';
+            } else {
+                els.btnAutoPreencherModal.hidden = true;
+            }
+        }
         if (modal.linha === 'PROGRAMA') {
             if (!modal.colunasAlocadas.size) {
                 els.selecionados.innerHTML = '<span class="vazio">Nenhum programa selecionado (cada opção marcada abrirá em uma coluna individual).</span>';
@@ -851,6 +1049,20 @@
     // =================================================================== eventos
 
     els.grid.addEventListener('click', ev => {
+        const btnMover = ev.target.closest('[data-mover-coluna]');
+        if (btnMover) {
+            ev.stopPropagation();
+            if (!btnMover.disabled) {
+                moverColuna(Number(btnMover.dataset.moverColuna), Number(btnMover.dataset.moverDir));
+            }
+            return;
+        }
+        const btnAuto = ev.target.closest('[data-autopreencher-coluna]');
+        if (btnAuto) {
+            ev.stopPropagation();
+            autoPreencherColuna(Number(btnAuto.dataset.autopreencherColuna), false);
+            return;
+        }
         const btnCol = ev.target.closest('[data-remover-coluna]');
         if (btnCol) {
             ev.stopPropagation();
@@ -926,7 +1138,9 @@
     els.selCrianca.addEventListener('change', () => carregarCrianca(els.selCrianca.value));
     els.selQuadro.addEventListener('change', () => carregarCrianca(els.selCrianca.value, els.selQuadro.value));
     els.btnNovo.addEventListener('click', novoQuadro);
+    if (els.btnDuplicar) els.btnDuplicar.addEventListener('click', duplicarQuadroAtual);
     if (els.btnExcluir) els.btnExcluir.addEventListener('click', excluirQuadroAtual);
+    if (els.btnAutoPreencherModal) els.btnAutoPreencherModal.addEventListener('click', autoPreencherNoModal);
     if (els.btnAddPrograma) els.btnAddPrograma.addEventListener('click', adicionarPrograma);
     if (els.btnPrimeiroPrograma) els.btnPrimeiroPrograma.addEventListener('click', adicionarPrograma);
     els.btnSalvar.addEventListener('click', salvarPlanejamento);

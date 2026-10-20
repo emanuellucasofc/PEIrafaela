@@ -141,6 +141,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn-danger { background: #fff; border-color: #F1C4BF; color: var(--perigo); }
 .btn-danger:hover { background: #FDEDEB; }
 .btn-sm { padding: 6px 10px; font-size: 12.5px; }
+.btn-xs { padding: 4px 8px; font-size: 11.5px; border-radius: 6px; }
+.section-header-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
 
 .icon-btn {
     width: 34px; height: 34px;
@@ -316,9 +325,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .programa-bloco {
     position: relative;
     height: 100%;
-    min-height: 64px;
+    min-height: 70px;
     border-radius: 5px;
-    padding: 10px 22px 8px 6px;
+    padding: 24px 6px 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -330,28 +339,56 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .programa-bloco.texto-escuro { color: #1C1A3A; }
 .cell-programa:hover .programa-bloco { filter: brightness(1.06); box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
-.programa-remove {
+
+.programa-actions {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    width: 20px;
-    height: 20px;
+    top: 3px;
+    left: 3px;
+    right: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2px;
+    pointer-events: none;
+}
+.programa-actions-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    pointer-events: auto;
+}
+.programa-btn, .programa-remove {
+    width: 19px;
+    height: 19px;
     border: none;
     border-radius: 50%;
     background: rgba(0, 0, 0, .28);
     color: #fff;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 800;
     line-height: 1;
     display: inline-grid;
     place-items: center;
     cursor: pointer;
     opacity: .85;
+    padding: 0;
     transition: background .15s, opacity .15s, transform .15s;
 }
+.programa-bloco.texto-escuro .programa-btn,
 .programa-bloco.texto-escuro .programa-remove {
     background: rgba(28, 26, 58, .18);
     color: #1C1A3A;
+}
+.programa-btn:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, .55);
+    color: #fff !important;
+    transform: scale(1.08);
+}
+.programa-btn:disabled {
+    opacity: .25;
+    cursor: default;
+    transform: none;
 }
 .programa-remove:hover {
     opacity: 1;
