@@ -104,6 +104,7 @@
         state.quadro = q;
         state.celulas.clear();
         q.celulas.forEach(c => state.celulas.set(chave(c.tipoLinha, c.indiceColuna), c));
+        desmembrarProgramasAgrupados();
         els.titulo.value = q.titulo || '';
         els.tituloPrint.textContent = q.titulo || '';
         if (els.dataInicio) els.dataInicio.value = q.dataInicio || '';
@@ -113,6 +114,39 @@
         els.metaData.textContent = formatarData(q.dataCriacao);
         document.title = `PEI · ${q.criancaNome}`;
         renderTodas();
+    }
+
+    /**
+     * Garante que cada programa fique em sua própria coluna individual.
+     * Caso alguma coluna possua mais de 1 programa selecionado, distribui os
+     * programas excedentes em colunas individuais livres e salva no banco.
+     */
+    function desmembrarProgramasAgrupados() {
+        const total = CFG.totalColunas || 11;
+        for (let col = 0; col < total; col++) {
+            const c = getCelula('PROGRAMA', col);
+            if (c.itensSelecionados && c.itensSelecionados.length > 1) {
+                const extras = c.itensSelecionados.slice(1);
+                c.itensSelecionados = [c.itensSelecionados[0]];
+                salvarCelula('PROGRAMA', col);
+                for (const itemExtra of extras) {
+                    const livre = proximaColunaLivre();
+                    if (livre !== -1) {
+                        const celNova = getCelula('PROGRAMA', livre);
+                        celNova.itensSelecionados = [itemExtra];
+                        salvarCelula('PROGRAMA', livre);
+                    }
+                }
+            }
+        }
+    }
+
+    function proximaColunaLivre() {
+        const total = CFG.totalColunas || 11;
+        for (let col = 0; col < total; col++) {
+            if (!colunaTemPrograma(col)) return col;
+        }
+        return -1;
     }
 
     function atualizarTextoPeriodoPrint() {
@@ -195,14 +229,7 @@
 
     function adicionarPrograma() {
         if (!state.quadro) return;
-        const total = CFG.totalColunas || 11;
-        let livre = -1;
-        for (let col = 0; col < total; col++) {
-            if (!colunaTemPrograma(col)) {
-                livre = col;
-                break;
-            }
-        }
+        const livre = proximaColunaLivre();
         if (livre === -1) {
             toast('Todas as 11 colunas de programas já foram preenchidas.', 'erro');
             return;
@@ -390,7 +417,8 @@
         pendente: false,
         seqBusca: 0,
         origem: null,
-        todosProgramas: null
+        todosProgramas: null,
+        colunasAlocadas: new Map() // itemId -> indiceColuna (usado quando linha === 'PROGRAMA')
     };
 
     const agendarSalvar = debounce(() => {
@@ -419,6 +447,10 @@
         modal.origem = origem;
         modal.itens = [];
         modal.pendente = false;
+        modal.colunasAlocadas = new Map();
+        if (linha === 'PROGRAMA') {
+            (getCelula('PROGRAMA', col).itensSelecionados || []).forEach(i => modal.colunasAlocadas.set(i.id, col));
+        }
 
         const c = getCelula(linha, col);
         const corColuna = getCelula('PROGRAMA', col).corCabecalho || PALETA[col];
@@ -529,7 +561,9 @@
     }
 
     function renderLista() {
-        const selecionadosIds = new Set(getCelula(modal.linha, modal.col).itensSelecionados.map(i => i.id));
+        const selecionadosIds = modal.linha === 'PROGRAMA'
+            ? new Set(modal.colunasAlocadas.keys())
+            : new Set(getCelula(modal.linha, modal.col).itensSelecionados.map(i => i.id));
         const sugeridos = modal.itens.filter(i => i.sugerido);
         const outros = modal.itens.filter(i => !i.sugerido);
 
@@ -563,21 +597,81 @@
     }
 
     function renderSelecionados() {
+        if (modal.linha === 'PROGRAMA') {
+            if (!modal.colunasAlocadas.size) {
+                els.selecionados.innerHTML = '<span class="vazio">Nenhum programa selecionado (cada opção marcada abrirá em uma coluna individual).</span>';
+                return;
+            }
+            const chips = [];
+            for (const [itemId, colIdx] of modal.colunasAlocadas.entries()) {
+                const cel = getCelula('PROGRAMA', colIdx);
+                const item = (cel.itensSelecionados || []).find(i => i.id === itemId)
+                    || modal.itens.find(i => i.id === itemId);
+                if (!item) continue;
+                const cor = cel.corCabecalho || PALETA[colIdx];
+                const estilo = `style="background:${cor};color:${corClara(cor) ? '#1C1A3A' : '#fff'}"`;
+                chips.push(`<span class="tag" ${estilo}>Coluna ${colIdx + 1}: ${esc(item.titulo)}
+                    <button type="button" data-remover="${item.id}" aria-label="Remover ${esc(item.titulo)}">&times;</button></span>`);
+            }
+            els.selecionados.innerHTML = chips.join('');
+            return;
+        }
+
         const c = getCelula(modal.linha, modal.col);
         const itens = c.itensSelecionados;
-        const cor = modal.linha === 'PROGRAMA' ? (c.corCabecalho || PALETA[modal.col]) : null;
         if (!itens.length) {
             els.selecionados.innerHTML = '<span class="vazio">Nenhum item selecionado.</span>';
             return;
         }
         els.selecionados.innerHTML = itens.map(i => {
-            const estilo = cor ? `style="background:${cor};color:${corClara(cor) ? '#1C1A3A' : '#fff'}"` : '';
-            return `<span class="tag" ${estilo}>${esc(i.titulo)}
+            return `<span class="tag">${esc(i.titulo)}
                 <button type="button" data-remover="${i.id}" aria-label="Remover ${esc(i.titulo)}">&times;</button></span>`;
         }).join('');
     }
 
+    function alocarProgramaEmColunaIndividual(item) {
+        if (!item || modal.colunasAlocadas.has(item.id)) return true;
+        let alvoCol = !colunaTemPrograma(modal.col) ? modal.col : proximaColunaLivre();
+        if (alvoCol === -1) {
+            toast('Todas as 11 colunas de programas já estão preenchidas.', 'erro');
+            return false;
+        }
+        const cel = getCelula('PROGRAMA', alvoCol);
+        cel.itensSelecionados = [item];
+        modal.colunasAlocadas.set(item.id, alvoCol);
+        renderCelula('PROGRAMA', alvoCol);
+        atualizarColunasVisiveis();
+        renderSelecionados();
+        salvarCelula('PROGRAMA', alvoCol);
+        return true;
+    }
+
     function alternarItem(id, marcado) {
+        if (modal.linha === 'PROGRAMA') {
+            if (marcado) {
+                const item = modal.itens.find(i => i.id === id);
+                if (!alocarProgramaEmColunaIndividual(item)) {
+                    const cb = els.lista.querySelector(`input[data-id="${id}"]`);
+                    if (cb) cb.checked = false;
+                }
+            } else {
+                const colIdx = modal.colunasAlocadas.get(id);
+                if (colIdx !== undefined) {
+                    const cel = getCelula('PROGRAMA', colIdx);
+                    cel.itensSelecionados = (cel.itensSelecionados || []).filter(i => i.id !== id);
+                    modal.colunasAlocadas.delete(id);
+                    if (colIdx === modal.col && modal.colunasAlocadas.size > 0) {
+                        modal.col = modal.colunasAlocadas.values().next().value;
+                    }
+                    renderCelula('PROGRAMA', colIdx);
+                    atualizarColunasVisiveis();
+                    renderSelecionados();
+                    salvarCelula('PROGRAMA', colIdx);
+                }
+            }
+            return;
+        }
+
         const c = getCelula(modal.linha, modal.col);
         if (marcado) {
             const item = modal.itens.find(i => i.id === id);
@@ -586,8 +680,6 @@
             c.itensSelecionados = c.itensSelecionados.filter(i => i.id !== id);
         }
         alterou(false);
-        // Ao mudar o programa, as sugestões das linhas abaixo mudam — atualiza o cabeçalho
-        if (modal.linha === 'PROGRAMA') els.modalKicker.textContent = `Coluna ${modal.col + 1}`;
     }
 
     async function cadastroRapido(ev) {
@@ -603,13 +695,17 @@
                 descricao: els.qaDescricao.value.trim() || null,
                 programaVinculadoId: ACEITA_VINCULO.has(modal.linha) && els.qaPrograma.value ? Number(els.qaPrograma.value) : null
             });
-            if (modal.linha === 'PROGRAMA') modal.todosProgramas = null; // força recarregar lista de programas
-            const c = getCelula(modal.linha, modal.col);
-            c.itensSelecionados.push(novo);
-            alterou(true);
+            if (modal.linha === 'PROGRAMA') {
+                modal.todosProgramas = null;
+                alocarProgramaEmColunaIndividual(novo);
+            } else {
+                const c = getCelula(modal.linha, modal.col);
+                c.itensSelecionados.push(novo);
+                alterou(true);
+            }
             els.qaForm.reset();
             els.quickAdd.open = false;
-            toast(`“${novo.titulo}” cadastrado no banco e adicionado ao quadrado.`, 'sucesso');
+            toast(`“${novo.titulo}” cadastrado no banco e adicionado ao quadro.`, 'sucesso');
             await buscarItens();
         } catch (e) {
             toast(e.message, 'erro');
@@ -619,6 +715,22 @@
     }
 
     function limparCelula() {
+        if (modal.linha === 'PROGRAMA') {
+            const cols = new Set([modal.col, ...modal.colunasAlocadas.values()]);
+            cols.forEach(colIdx => {
+                const cel = getCelula('PROGRAMA', colIdx);
+                if ((cel.itensSelecionados && cel.itensSelecionados.length) || cel.textoLivre) {
+                    cel.itensSelecionados = [];
+                    cel.textoLivre = null;
+                    renderCelula('PROGRAMA', colIdx);
+                    salvarCelula('PROGRAMA', colIdx);
+                }
+            });
+            modal.colunasAlocadas.clear();
+            els.textoLivre.value = '';
+            fecharModal();
+            return;
+        }
         const c = getCelula(modal.linha, modal.col);
         if (!c.itensSelecionados.length && !c.textoLivre) return;
         c.itensSelecionados = [];
@@ -626,9 +738,6 @@
         els.textoLivre.value = '';
         alterou(true);
         renderLista();
-        if (modal.linha === 'PROGRAMA') {
-            fecharModal();
-        }
     }
 
     function fecharModal() {
