@@ -485,8 +485,7 @@ async function criarQuadroEmBranco(db, criancaId, titulo) {
     if (!cRes.rows.length) throw httpError(404, `Criança não encontrada: ${criancaId}`);
 
     const hoje = new Date().toISOString().slice(0, 10);
-    const [y, m, d] = hoje.split('-');
-    const tituloFinal = (titulo && titulo.trim()) ? titulo.trim() : `Planejamento dos Atendimentos - ${d}/${m}/${y}`;
+    const tituloFinal = (titulo && titulo.trim()) ? titulo.trim() : 'Planejamento dos Atendimentos';
 
     const qRes = await db.query(
         `INSERT INTO quadros_pei (titulo, crianca_id, data_criacao) VALUES ($1, $2, $3) RETURNING id`,

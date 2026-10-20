@@ -158,7 +158,7 @@ public class QuadroService {
                 .crianca(crianca)
                 .dataCriacao(hoje)
                 .titulo(titulo == null || titulo.isBlank()
-                        ? "Planejamento dos Atendimentos - " + hoje.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                        ? "Planejamento dos Atendimentos"
                         : titulo.trim())
                 .build();
         for (CategoriaItem linha : CategoriaItem.values()) {

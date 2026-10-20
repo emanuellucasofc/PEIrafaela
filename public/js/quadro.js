@@ -95,9 +95,32 @@
         }
     }
 
+    function limparTituloPadrao(titulo) {
+        if (!titulo) return 'Planejamento dos Atendimentos';
+        return titulo
+            .replace(/^Planejamento dos Atendimentos\s*-\s*(?:\d{2}\/\d{2}\/\d{4})?\s*$/i, 'Planejamento dos Atendimentos')
+            .trim();
+    }
+
+    function rotuloOpcaoQuadro(q) {
+        const base = limparTituloPadrao(q.titulo);
+        const di = q.dataInicio ? formatarData(q.dataInicio) : null;
+        const df = q.dataFim ? formatarData(q.dataFim) : null;
+        if (di && df) {
+            return `${base} (do dia ${di} até o dia ${df})`;
+        }
+        if (di) {
+            return `${base} (a partir do dia ${di})`;
+        }
+        if (df) {
+            return `${base} (até o dia ${df})`;
+        }
+        return `${base} (${formatarData(q.dataCriacao)})`;
+    }
+
     function renderSeletorQuadros(quadros, selecionadoId) {
         els.selQuadro.innerHTML = quadros.map(q =>
-            `<option value="${q.id}" ${q.id === selecionadoId ? 'selected' : ''}>${esc(q.titulo)} (${formatarData(q.dataCriacao)})</option>`
+            `<option value="${q.id}" ${q.id === selecionadoId ? 'selected' : ''}>${esc(rotuloOpcaoQuadro(q))}</option>`
         ).join('');
     }
 
@@ -106,13 +129,14 @@
         state.celulas.clear();
         q.celulas.forEach(c => state.celulas.set(chave(c.tipoLinha, c.indiceColuna), c));
         desmembrarProgramasAgrupados();
-        els.titulo.value = q.titulo || '';
-        els.tituloPrint.textContent = q.titulo || '';
+        const tituloLimpo = limparTituloPadrao(q.titulo);
+        els.titulo.value = tituloLimpo;
+        els.tituloPrint.textContent = tituloLimpo;
         if (els.dataInicio) els.dataInicio.value = q.dataInicio || '';
         if (els.dataFim) els.dataFim.value = q.dataFim || '';
-        atualizarTextoPeriodoPrint();
         els.metaCrianca.textContent = q.criancaNome;
-        els.metaData.textContent = formatarData(q.dataCriacao);
+        atualizarTextoPeriodoPrint();
+        atualizarOpcaoQuadro(q);
         document.title = `PEI · ${q.criancaNome}`;
         renderTodas();
     }
@@ -151,17 +175,18 @@
     }
 
     function atualizarTextoPeriodoPrint() {
-        if (!els.metaPeriodoPrint) return;
         const di = els.dataInicio && els.dataInicio.value ? formatarData(els.dataInicio.value) : null;
         const df = els.dataFim && els.dataFim.value ? formatarData(els.dataFim.value) : null;
-        if (di && df) {
-            els.metaPeriodoPrint.innerHTML = ` &nbsp;·&nbsp; Período: <strong>do dia ${esc(di)} até o dia ${esc(df)}</strong>`;
-        } else if (di) {
-            els.metaPeriodoPrint.innerHTML = ` &nbsp;·&nbsp; A partir do dia <strong>${esc(di)}</strong>`;
-        } else if (df) {
-            els.metaPeriodoPrint.innerHTML = ` &nbsp;·&nbsp; Até o dia <strong>${esc(df)}</strong>`;
-        } else {
-            els.metaPeriodoPrint.innerHTML = '';
+        if (els.metaData) {
+            if (di && df) {
+                els.metaData.innerHTML = `Período: <strong>do dia ${esc(di)} até o dia ${esc(df)}</strong>`;
+            } else if (di) {
+                els.metaData.innerHTML = `Período: <strong>a partir do dia ${esc(di)}</strong>`;
+            } else if (df) {
+                els.metaData.innerHTML = `Período: <strong>até o dia ${esc(df)}</strong>`;
+            } else if (state.quadro) {
+                els.metaData.textContent = `Criado em: ${formatarData(state.quadro.dataCriacao)}`;
+            }
         }
     }
 
@@ -376,8 +401,10 @@
         els.btnSalvar.disabled = true;
         setStatus('Salvando…', 'saving');
         try {
+            const tituloLimpo = limparTituloPadrao(els.titulo.value.trim() || state.quadro.titulo);
+            els.titulo.value = tituloLimpo;
             const payload = {
-                titulo: els.titulo.value.trim() || null,
+                titulo: tituloLimpo,
                 dataInicio: els.dataInicio && els.dataInicio.value ? els.dataInicio.value : null,
                 dataFim: els.dataFim && els.dataFim.value ? els.dataFim.value : null,
                 celulas: Array.from(state.celulas.values()).map(payloadCelula)
@@ -398,11 +425,17 @@
 
     async function salvarCabecalhoQuadro() {
         if (!state.quadro) return;
-        const titulo = els.titulo.value.trim() || state.quadro.titulo;
+        const titulo = limparTituloPadrao(els.titulo.value.trim() || state.quadro.titulo);
         els.titulo.value = titulo;
         const dataInicio = els.dataInicio && els.dataInicio.value ? els.dataInicio.value : null;
         const dataFim = els.dataFim && els.dataFim.value ? els.dataFim.value : null;
         atualizarTextoPeriodoPrint();
+        atualizarOpcaoQuadro({
+            ...state.quadro,
+            titulo,
+            dataInicio,
+            dataFim
+        });
 
         if (titulo === state.quadro.titulo
             && dataInicio === (state.quadro.dataInicio || null)
@@ -420,7 +453,8 @@
             state.quadro.titulo = q.titulo;
             state.quadro.dataInicio = q.dataInicio || null;
             state.quadro.dataFim = q.dataFim || null;
-            els.tituloPrint.textContent = q.titulo;
+            els.tituloPrint.textContent = limparTituloPadrao(q.titulo);
+            atualizarTextoPeriodoPrint();
             atualizarOpcaoQuadro(q);
             setStatus('Alterações salvas · ' + horaAgora(), 'saved');
         } catch (e) {
@@ -431,7 +465,7 @@
 
     function atualizarOpcaoQuadro(q) {
         const opt = els.selQuadro.querySelector(`option[value="${q.id}"]`);
-        if (opt) opt.textContent = `${q.titulo} (${formatarData(q.dataCriacao)})`;
+        if (opt) opt.textContent = rotuloOpcaoQuadro(q);
     }
 
     async function novoQuadro() {
