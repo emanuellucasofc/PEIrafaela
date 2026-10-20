@@ -27,6 +27,7 @@
         selCrianca: $('selCrianca'),
         selQuadro: $('selQuadro'),
         btnNovo: $('btnNovoQuadro'),
+        btnExcluir: $('btnExcluirQuadro'),
         btnSalvar: $('btnSalvar'),
         btnImprimir: $('btnImprimir'),
         status: $('saveStatus'),
@@ -250,14 +251,53 @@
             const cor = c.corCabecalho || PALETA[col];
             bloco.style.background = cor;
             bloco.classList.toggle('texto-escuro', corClara(cor));
+            const btnRemoverCol = `<button type="button" class="programa-remove no-print" data-remover-coluna="${col}" title="Excluir este programa do quadro" aria-label="Excluir programa da coluna ${col + 1}">&times;</button>`;
             bloco.innerHTML = (itens.length || texto)
-                ? itens.map(i => `<span class="programa-titulo">${esc(i.titulo)}</span>`).join('') + texto
+                ? btnRemoverCol + itens.map(i => `<span class="programa-titulo">${esc(i.titulo)}</span>`).join('') + texto
                 : '';
         } else {
             el.querySelector('.cell-content').innerHTML =
-                itens.map(i => `<span class="chip">${esc(i.titulo)}</span>`).join('') + texto;
+                itens.map(i => `<span class="chip"><span>${esc(i.titulo)}</span><button type="button" class="chip-remove no-print" data-remover-chip="${i.id}" title="Excluir item" aria-label="Remover ${esc(i.titulo)}">&times;</button></span>`).join('') + texto;
             el.querySelector('.cell-hint').hidden = itens.length > 0 || !!c.textoLivre;
         }
+    }
+
+    function excluirColuna(col) {
+        const progCel = getCelula('PROGRAMA', col);
+        const nomeProg = (progCel.itensSelecionados && progCel.itensSelecionados[0])
+            ? progCel.itensSelecionados[0].titulo
+            : (progCel.textoLivre || `Coluna ${col + 1}`);
+
+        const outrasLinhas = ['RECURSO', 'ATIVIDADE', 'PREFERENCIA', 'OBSERVACAO'];
+        const temConteudoAbaixo = outrasLinhas.some(l => {
+            const c = getCelula(l, col);
+            return (c.itensSelecionados && c.itensSelecionados.length > 0) || (c.textoLivre && c.textoLivre.trim());
+        });
+
+        if (temConteudoAbaixo && !window.confirm(`Deseja excluir o programa "${nomeProg}" e limpar os itens desta coluna?`)) {
+            return;
+        }
+
+        ['PROGRAMA', ...outrasLinhas].forEach(l => {
+            const c = getCelula(l, col);
+            const tinhaAlgo = (c.itensSelecionados && c.itensSelecionados.length > 0) || Boolean(c.textoLivre);
+            c.itensSelecionados = [];
+            c.textoLivre = null;
+            renderCelula(l, col);
+            if (tinhaAlgo) {
+                salvarCelula(l, col);
+            }
+        });
+        atualizarColunasVisiveis();
+        toast(`Programa "${nomeProg}" removido do quadro.`, 'sucesso');
+    }
+
+    function removerChipDireto(linha, col, itemId) {
+        const c = getCelula(linha, col);
+        if (!c.itensSelecionados || !c.itensSelecionados.length) return;
+        c.itensSelecionados = c.itensSelecionados.filter(i => i.id !== itemId);
+        renderCelula(linha, col);
+        salvarCelula(linha, col);
     }
 
     function flash(linha, col) {
@@ -405,6 +445,27 @@
             els.titulo.select();
         } catch (e) {
             toast(e.message, 'erro');
+        }
+    }
+
+    async function excluirQuadroAtual() {
+        if (!state.quadro) return;
+        const criancaId = els.selCrianca.value;
+        const titulo = state.quadro.titulo || 'este quadro';
+        if (!window.confirm(`Deseja realmente excluir o quadro "${titulo}"?`)) {
+            return;
+        }
+        try {
+            if (els.btnExcluir) els.btnExcluir.disabled = true;
+            setStatus('Excluindo…', 'saving');
+            await api.del(`/api/quadros/${state.quadro.id}`);
+            await carregarCrianca(criancaId);
+            toast(`Quadro "${titulo}" excluído com sucesso.`, 'sucesso');
+        } catch (e) {
+            setStatus('Erro ao excluir', 'error');
+            toast(e.message, 'erro');
+        } finally {
+            if (els.btnExcluir) els.btnExcluir.disabled = false;
         }
     }
 
@@ -756,6 +817,21 @@
     // =================================================================== eventos
 
     els.grid.addEventListener('click', ev => {
+        const btnCol = ev.target.closest('[data-remover-coluna]');
+        if (btnCol) {
+            ev.stopPropagation();
+            excluirColuna(Number(btnCol.dataset.removerColuna));
+            return;
+        }
+        const btnChip = ev.target.closest('[data-remover-chip]');
+        if (btnChip) {
+            ev.stopPropagation();
+            const cell = btnChip.closest('.cell');
+            if (cell) {
+                removerChipDireto(cell.dataset.linha, Number(cell.dataset.col), Number(btnChip.dataset.removerChip));
+            }
+            return;
+        }
         const cell = ev.target.closest('.cell');
         if (cell) abrirModal(cell.dataset.linha, Number(cell.dataset.col), cell);
     });
@@ -816,6 +892,7 @@
     els.selCrianca.addEventListener('change', () => carregarCrianca(els.selCrianca.value));
     els.selQuadro.addEventListener('change', () => carregarCrianca(els.selCrianca.value, els.selQuadro.value));
     els.btnNovo.addEventListener('click', novoQuadro);
+    if (els.btnExcluir) els.btnExcluir.addEventListener('click', excluirQuadroAtual);
     if (els.btnAddPrograma) els.btnAddPrograma.addEventListener('click', adicionarPrograma);
     if (els.btnPrimeiroPrograma) els.btnPrimeiroPrograma.addEventListener('click', adicionarPrograma);
     els.btnSalvar.addEventListener('click', salvarPlanejamento);

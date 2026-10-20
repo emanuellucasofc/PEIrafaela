@@ -299,10 +299,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
     border-bottom: 1px solid var(--rosa-borda);
 }
 .programa-bloco {
+    position: relative;
     height: 100%;
     min-height: 64px;
     border-radius: 5px;
-    padding: 8px 6px;
+    padding: 10px 22px 8px 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -314,6 +315,35 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .programa-bloco.texto-escuro { color: #1C1A3A; }
 .cell-programa:hover .programa-bloco { filter: brightness(1.06); box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
+.programa-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .28);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    display: inline-grid;
+    place-items: center;
+    cursor: pointer;
+    opacity: .85;
+    transition: background .15s, opacity .15s, transform .15s;
+}
+.programa-bloco.texto-escuro .programa-remove {
+    background: rgba(28, 26, 58, .18);
+    color: #1C1A3A;
+}
+.programa-remove:hover {
+    opacity: 1;
+    background: #C0392B;
+    color: #fff !important;
+    transform: scale(1.08);
+}
 .programa-titulo {
     font-weight: 800;
     font-size: 12.5px;
@@ -366,13 +396,35 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .chip {
-    display: block;
-    padding: 3px 7px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 5px;
+    padding: 3px 6px 3px 7px;
     border-radius: 6px;
     background: rgba(255, 255, 255, .62);
     border: 1px solid rgba(214, 120, 135, .30);
     line-height: 1.28;
     word-break: break-word;
+}
+.chip-remove {
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: #9A4A59;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: .65;
+    transition: opacity .15s, background .15s, color .15s;
+}
+.chip-remove:hover {
+    opacity: 1;
+    background: #C0392B;
+    color: #fff;
 }
 
 .texto-livre {
