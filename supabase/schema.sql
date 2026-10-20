@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS quadros_pei (
     id BIGSERIAL PRIMARY KEY,
     titulo VARCHAR(200) NOT NULL,
     crianca_id BIGINT NOT NULL REFERENCES criancas(id) ON DELETE CASCADE,
-    data_criacao DATE
+    data_criacao DATE,
+    data_inicio DATE,
+    data_fim DATE
 );
 
 CREATE TABLE IF NOT EXISTS celulas_pei (

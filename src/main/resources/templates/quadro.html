@@ -66,11 +66,18 @@
                 <span id="tituloPrint" class="print-only titulo-print"></span>
             </div>
             <div class="sheet-header-right">
+                <div class="periodo-box no-print" aria-label="Período do planejamento">
+                    <span>Do dia</span>
+                    <input id="dataInicioQuadro" class="input input-date" type="date" aria-label="Data inicial">
+                    <span>até o dia</span>
+                    <input id="dataFimQuadro" class="input input-date" type="date" aria-label="Data final">
+                </div>
                 <button id="btnAdicionarPrograma" type="button" class="btn btn-primary btn-sm no-print">
                     + Adicionar Programa
                 </button>
                 <div class="sheet-meta">
                     Criança: <strong id="metaCrianca">—</strong>
+                    <span id="metaPeriodoPrint" class="print-only-inline"></span>
                     &nbsp;·&nbsp; Criado em: <span id="metaData">—</span>
                 </div>
             </div>

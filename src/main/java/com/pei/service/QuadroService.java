@@ -97,13 +97,15 @@ public class QuadroService {
         return CelulaDTO.of(celula);
     }
 
-    /** Salvamento completo do planejamento (título + todos os quadrados enviados). */
+    /** Salvamento completo do planejamento (título, período + todos os quadrados enviados). */
     @Transactional
     public QuadroDTO salvar(Long quadroId, QuadroUpdateRequest req) {
         QuadroPei quadro = obterEntidade(quadroId);
         if (req.titulo() != null && !req.titulo().isBlank()) {
             quadro.setTitulo(req.titulo().trim());
         }
+        quadro.setDataInicio(req.dataInicio());
+        quadro.setDataFim(req.dataFim());
         if (req.celulas() != null) {
             req.celulas().forEach(c -> aplicarCelula(quadro, c));
         }

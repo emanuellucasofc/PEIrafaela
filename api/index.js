@@ -144,8 +144,12 @@ async function ensureInitialized() {
                 id BIGSERIAL PRIMARY KEY,
                 titulo VARCHAR(200) NOT NULL,
                 crianca_id BIGINT NOT NULL REFERENCES criancas(id) ON DELETE CASCADE,
-                data_criacao DATE
+                data_criacao DATE,
+                data_inicio DATE,
+                data_fim DATE
             );
+            ALTER TABLE quadros_pei ADD COLUMN IF NOT EXISTS data_inicio DATE;
+            ALTER TABLE quadros_pei ADD COLUMN IF NOT EXISTS data_fim DATE;
             CREATE TABLE IF NOT EXISTS celulas_pei (
                 id BIGSERIAL PRIMARY KEY,
                 quadro_id BIGINT NOT NULL REFERENCES quadros_pei(id) ON DELETE CASCADE,
@@ -414,7 +418,7 @@ async function readBody(req) {
 
 async function carregarQuadroCompleto(db, quadroId) {
     const qRes = await db.query(
-        `SELECT q.id, q.titulo, q.crianca_id, q.data_criacao, c.nome AS crianca_nome
+        `SELECT q.id, q.titulo, q.crianca_id, q.data_criacao, q.data_inicio, q.data_fim, c.nome AS crianca_nome
          FROM quadros_pei q
          JOIN criancas c ON c.id = q.crianca_id
          WHERE q.id = $1`,
@@ -469,6 +473,8 @@ async function carregarQuadroCompleto(db, quadroId) {
         criancaId: Number(q.crianca_id),
         criancaNome: q.crianca_nome,
         dataCriacao: isoDate(q.data_criacao),
+        dataInicio: isoDate(q.data_inicio),
+        dataFim: isoDate(q.data_fim),
         totalColunas: TOTAL_COLUNAS,
         celulas
     };
@@ -760,13 +766,15 @@ module.exports = async function handler(req, res) {
             const cRes = await db.query(`SELECT id FROM criancas WHERE id = $1`, [criancaId]);
             if (!cRes.rows.length) throw httpError(404, `Criança não encontrada: ${criancaId}`);
             const { rows } = await db.query(
-                `SELECT id, titulo, data_criacao FROM quadros_pei WHERE crianca_id = $1 ORDER BY id DESC`,
+                `SELECT id, titulo, data_criacao, data_inicio, data_fim FROM quadros_pei WHERE crianca_id = $1 ORDER BY id DESC`,
                 [criancaId]
             );
             return sendJson(res, 200, rows.map(r => ({
                 id: Number(r.id),
                 titulo: r.titulo,
-                dataCriacao: isoDate(r.data_criacao)
+                dataCriacao: isoDate(r.data_criacao),
+                dataInicio: isoDate(r.data_inicio),
+                dataFim: isoDate(r.data_fim)
             })));
         }
 
@@ -831,6 +839,11 @@ module.exports = async function handler(req, res) {
                 if (!qRes.rows.length) throw httpError(404, `Quadro PEI não encontrado: ${id}`);
                 if (body.titulo && String(body.titulo).trim()) {
                     await db.query(`UPDATE quadros_pei SET titulo = $1 WHERE id = $2`, [String(body.titulo).trim(), id]);
+                }
+                if ('dataInicio' in body || 'dataFim' in body) {
+                    const di = body.dataInicio && String(body.dataInicio).trim() ? String(body.dataInicio).trim() : null;
+                    const df = body.dataFim && String(body.dataFim).trim() ? String(body.dataFim).trim() : null;
+                    await db.query(`UPDATE quadros_pei SET data_inicio = $1, data_fim = $2 WHERE id = $3`, [di, df, id]);
                 }
                 if (Array.isArray(body.celulas)) {
                     for (const cel of body.celulas) {

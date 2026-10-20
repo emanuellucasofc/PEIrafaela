@@ -23,17 +23,24 @@ public class QuadroPei {
 
     private LocalDate dataCriacao;
 
+    private LocalDate dataInicio;
+
+    private LocalDate dataFim;
+
     @OneToMany(mappedBy = "quadro", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CelulaPei> celulas = new ArrayList<>();
 
     public QuadroPei() {
     }
 
-    public QuadroPei(Long id, String titulo, Crianca crianca, LocalDate dataCriacao, List<CelulaPei> celulas) {
+    public QuadroPei(Long id, String titulo, Crianca crianca, LocalDate dataCriacao,
+                     LocalDate dataInicio, LocalDate dataFim, List<CelulaPei> celulas) {
         this.id = id;
         this.titulo = titulo;
         this.crianca = crianca;
         this.dataCriacao = dataCriacao;
+        this.dataInicio = dataInicio;
+        this.dataFim = dataFim;
         this.celulas = celulas != null ? celulas : new ArrayList<>();
     }
 
@@ -78,6 +85,22 @@ public class QuadroPei {
         this.dataCriacao = dataCriacao;
     }
 
+    public LocalDate getDataInicio() {
+        return dataInicio;
+    }
+
+    public void setDataInicio(LocalDate dataInicio) {
+        this.dataInicio = dataInicio;
+    }
+
+    public LocalDate getDataFim() {
+        return dataFim;
+    }
+
+    public void setDataFim(LocalDate dataFim) {
+        this.dataFim = dataFim;
+    }
+
     public List<CelulaPei> getCelulas() {
         return celulas;
     }
@@ -91,6 +114,8 @@ public class QuadroPei {
         private String titulo;
         private Crianca crianca;
         private LocalDate dataCriacao;
+        private LocalDate dataInicio;
+        private LocalDate dataFim;
         private List<CelulaPei> celulas = new ArrayList<>();
 
         public Builder id(Long id) {
@@ -113,13 +138,23 @@ public class QuadroPei {
             return this;
         }
 
+        public Builder dataInicio(LocalDate dataInicio) {
+            this.dataInicio = dataInicio;
+            return this;
+        }
+
+        public Builder dataFim(LocalDate dataFim) {
+            this.dataFim = dataFim;
+            return this;
+        }
+
         public Builder celulas(List<CelulaPei> celulas) {
             this.celulas = celulas;
             return this;
         }
 
         public QuadroPei build() {
-            return new QuadroPei(id, titulo, crianca, dataCriacao, celulas);
+            return new QuadroPei(id, titulo, crianca, dataCriacao, dataInicio, dataFim, celulas);
         }
     }
 }

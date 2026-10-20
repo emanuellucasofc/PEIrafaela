@@ -32,6 +32,9 @@
         status: $('saveStatus'),
         titulo: $('tituloQuadro'),
         tituloPrint: $('tituloPrint'),
+        dataInicio: $('dataInicioQuadro'),
+        dataFim: $('dataFimQuadro'),
+        metaPeriodoPrint: $('metaPeriodoPrint'),
         metaCrianca: $('metaCrianca'),
         metaData: $('metaData'),
         btnAddPrograma: $('btnAdicionarPrograma'),
@@ -103,10 +106,28 @@
         q.celulas.forEach(c => state.celulas.set(chave(c.tipoLinha, c.indiceColuna), c));
         els.titulo.value = q.titulo || '';
         els.tituloPrint.textContent = q.titulo || '';
+        if (els.dataInicio) els.dataInicio.value = q.dataInicio || '';
+        if (els.dataFim) els.dataFim.value = q.dataFim || '';
+        atualizarTextoPeriodoPrint();
         els.metaCrianca.textContent = q.criancaNome;
         els.metaData.textContent = formatarData(q.dataCriacao);
         document.title = `PEI · ${q.criancaNome}`;
         renderTodas();
+    }
+
+    function atualizarTextoPeriodoPrint() {
+        if (!els.metaPeriodoPrint) return;
+        const di = els.dataInicio && els.dataInicio.value ? formatarData(els.dataInicio.value) : null;
+        const df = els.dataFim && els.dataFim.value ? formatarData(els.dataFim.value) : null;
+        if (di && df) {
+            els.metaPeriodoPrint.innerHTML = ` &nbsp;·&nbsp; Período: <strong>do dia ${esc(di)} até o dia ${esc(df)}</strong>`;
+        } else if (di) {
+            els.metaPeriodoPrint.innerHTML = ` &nbsp;·&nbsp; A partir do dia <strong>${esc(di)}</strong>`;
+        } else if (df) {
+            els.metaPeriodoPrint.innerHTML = ` &nbsp;·&nbsp; Até o dia <strong>${esc(df)}</strong>`;
+        } else {
+            els.metaPeriodoPrint.innerHTML = '';
+        }
     }
 
     function getCelula(linha, col) {
@@ -290,6 +311,8 @@
         try {
             const payload = {
                 titulo: els.titulo.value.trim() || null,
+                dataInicio: els.dataInicio && els.dataInicio.value ? els.dataInicio.value : null,
+                dataFim: els.dataFim && els.dataFim.value ? els.dataFim.value : null,
                 celulas: Array.from(state.celulas.values()).map(payloadCelula)
             };
             const q = await api.put(`/api/quadros/${state.quadro.id}`, payload);
@@ -306,15 +329,30 @@
         }
     }
 
-    async function salvarTitulo() {
+    async function salvarCabecalhoQuadro() {
         if (!state.quadro) return;
-        const titulo = els.titulo.value.trim();
-        if (!titulo) { els.titulo.value = state.quadro.titulo; return; }
-        if (titulo === state.quadro.titulo) return;
+        const titulo = els.titulo.value.trim() || state.quadro.titulo;
+        els.titulo.value = titulo;
+        const dataInicio = els.dataInicio && els.dataInicio.value ? els.dataInicio.value : null;
+        const dataFim = els.dataFim && els.dataFim.value ? els.dataFim.value : null;
+        atualizarTextoPeriodoPrint();
+
+        if (titulo === state.quadro.titulo
+            && dataInicio === (state.quadro.dataInicio || null)
+            && dataFim === (state.quadro.dataFim || null)) {
+            return;
+        }
         try {
             setStatus('Salvando…', 'saving');
-            const q = await api.put(`/api/quadros/${state.quadro.id}`, { titulo, celulas: null });
+            const q = await api.put(`/api/quadros/${state.quadro.id}`, {
+                titulo,
+                dataInicio,
+                dataFim,
+                celulas: null
+            });
             state.quadro.titulo = q.titulo;
+            state.quadro.dataInicio = q.dataInicio || null;
+            state.quadro.dataFim = q.dataFim || null;
             els.tituloPrint.textContent = q.titulo;
             atualizarOpcaoQuadro(q);
             setStatus('Alterações salvas · ' + horaAgora(), 'saved');
@@ -676,8 +714,10 @@
         els.tituloPrint.textContent = els.titulo.value;
         window.print();
     });
-    els.titulo.addEventListener('change', salvarTitulo);
+    els.titulo.addEventListener('change', salvarCabecalhoQuadro);
     els.titulo.addEventListener('keydown', ev => { if (ev.key === 'Enter') els.titulo.blur(); });
+    if (els.dataInicio) els.dataInicio.addEventListener('change', salvarCabecalhoQuadro);
+    if (els.dataFim) els.dataFim.addEventListener('change', salvarCabecalhoQuadro);
 
     window.addEventListener('beforeunload', ev => {
         if (state.pendentes > 0 || modal.pendente) {

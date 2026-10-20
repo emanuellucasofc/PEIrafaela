@@ -13,6 +13,8 @@ public record QuadroDTO(
         Long criancaId,
         String criancaNome,
         LocalDate dataCriacao,
+        LocalDate dataInicio,
+        LocalDate dataFim,
         int totalColunas,
         List<CelulaDTO> celulas
 ) {
@@ -24,7 +26,6 @@ public record QuadroDTO(
                 .map(CelulaDTO::of)
                 .toList();
         return new QuadroDTO(q.getId(), q.getTitulo(), q.getCrianca().getId(), q.getCrianca().getNome(),
-                q.getDataCriacao(), totalColunas, celulas);
+                q.getDataCriacao(), q.getDataInicio(), q.getDataFim(), totalColunas, celulas);
     }
 }
-

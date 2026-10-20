@@ -190,6 +190,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
     gap: 14px;
 }
 
+.periodo-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    background: #F7F4FC;
+    border: 1px solid #E3DCF2;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--texto);
+}
+.periodo-box .input-date {
+    width: auto;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.print-only-inline { display: none; }
+
 .sem-programas-box {
     border: 2px dashed var(--rosa-borda);
     background: #FFF7F8;
@@ -719,6 +740,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
     .no-print, .toolbar, .modal-backdrop, .toasts, .cell-hint, .programa-placeholder { display: none !important; }
     .print-only { display: block; }
+    .print-only-inline { display: inline; }
 
     .sheet-wrapper { padding: 0; overflow: visible; }
     .sheet {
