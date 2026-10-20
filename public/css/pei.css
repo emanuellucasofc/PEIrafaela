@@ -32,6 +32,10 @@ html, body {
     color: var(--texto);
     background: var(--fundo-app);
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
 }
 
 [hidden] { display: none !important; }
@@ -162,7 +166,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .sheet-wrapper {
     padding: 22px 24px 40px;
-    overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
 }
 
 .sheet {
@@ -170,8 +175,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
     border-radius: 14px;
     box-shadow: var(--sombra);
     padding: 18px 18px 22px;
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
+    max-width: 100%;
 }
 
 .sheet-header {
@@ -241,7 +246,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
     padding: 2px 6px;
     margin-left: -6px;
     border-radius: 6px;
-    min-width: 420px;
+    width: min(440px, 100%);
+    max-width: 100%;
     outline: none;
 }
 .titulo-input:hover { border-color: #D9D3E5; }
@@ -249,6 +255,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .sheet-meta { font-size: 13px; color: var(--texto-suave); }
 .sheet-meta strong { color: var(--texto); }
+
+.pei-grid-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    border-radius: 6px;
+}
 
 /* Grade principal: 1 coluna fixa de rótulos + N colunas de atendimento */
 .pei-grid {
@@ -770,6 +785,276 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .data-table .sub { font-size: 12px; color: var(--texto-suave); margin-top: 2px; }
 .muted { color: var(--texto-suave); }
 
+/* ------------------------------------------------------------------ Responsividade Mobile Web (iOS & Android) */
+
+/* Dispositivos touch (iPhone, iPad, Android): exibe dicas e amplia áreas de toque */
+@media (hover: none), (pointer: coarse) {
+    .cell-hint {
+        opacity: .72;
+        font-size: 11px;
+    }
+    .programa-remove {
+        width: 24px;
+        height: 24px;
+        font-size: 15px;
+        opacity: .95;
+    }
+    .chip-remove {
+        min-width: 22px;
+        min-height: 22px;
+        font-size: 15px;
+        opacity: .85;
+        display: inline-grid;
+        place-items: center;
+    }
+}
+
+/* Tablets e celulares (<= 768px) */
+@media (max-width: 768px) {
+    body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* Evita zoom involuntário do Safari iOS ao focar inputs (< 16px) */
+    .select, .input, .textarea, .periodo-box .input-date {
+        font-size: 16px !important;
+    }
+
+    input[type="date"] {
+        -webkit-appearance: none;
+        appearance: none;
+        min-height: 40px;
+    }
+
+    .toolbar {
+        position: static;
+        padding: calc(10px + env(safe-area-inset-top)) 12px 12px;
+        gap: 10px;
+    }
+    .brand h1 { font-size: 14.5px; line-height: 1.2; }
+    .brand small { font-size: 11px; display: block; }
+
+    .toolbar-controls {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .toolbar-controls .field-inline {
+        grid-column: 1 / -1;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+    }
+    .toolbar-controls .select {
+        width: 100%;
+        min-width: 0;
+        min-height: 42px;
+    }
+    .toolbar-controls .btn {
+        width: 100%;
+        min-height: 42px;
+        padding: 8px 10px;
+        font-size: 13px;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.2;
+    }
+    .toolbar-controls a.btn-outline {
+        grid-column: 1 / -1;
+    }
+    .toolbar-controls .save-status {
+        grid-column: 1 / -1;
+        text-align: center;
+        min-width: 0;
+        padding: 2px 0;
+    }
+
+    .sheet-wrapper {
+        padding: 10px 10px 26px;
+    }
+    .sheet {
+        padding: 14px 12px 16px;
+        border-radius: 12px;
+    }
+    .sheet-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .sheet-header > div:first-child {
+        width: 100%;
+    }
+    .titulo-input {
+        width: 100%;
+        min-width: 0;
+        margin-left: 0;
+        font-size: 17px !important;
+        padding: 6px 8px;
+        border-color: #E3DCF2;
+        background: #FBFAFE;
+    }
+    .sheet-header-right {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .periodo-box {
+        width: 100%;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        gap: 6px 8px;
+        padding: 8px 10px;
+    }
+    .periodo-box .input-date {
+        width: 100%;
+    }
+    #btnAdicionarPrograma {
+        width: 100%;
+        min-height: 44px;
+        font-size: 14px;
+    }
+    .sheet-meta {
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+    /* Grade adaptada para swipe horizontal suave no celular */
+    .pei-grid {
+        --label-w: 102px;
+        --col-min: 152px;
+        grid-template-rows: minmax(68px, auto) repeat(4, minmax(124px, auto));
+    }
+    .row-label {
+        font-size: 10.5px;
+        padding: 8px 6px;
+        word-break: break-word;
+        hyphens: auto;
+        box-shadow: 2px 0 6px rgba(0, 0, 0, .05);
+    }
+    .programa-titulo {
+        font-size: 12px;
+    }
+
+    /* Modal estilo Bottom Sheet para iOS / Android */
+    .modal-backdrop {
+        padding: 0;
+        align-items: flex-end;
+    }
+    .modal {
+        width: 100%;
+        max-height: 92vh;
+        max-height: 92dvh;
+        border-radius: 18px 18px 0 0;
+    }
+    .modal-header {
+        padding: 14px 16px;
+    }
+    .modal-header h2 {
+        font-size: 16px;
+    }
+    .modal-body {
+        padding: 14px 16px;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+    .item-list {
+        max-height: 38vh;
+        max-height: 38dvh;
+        -webkit-overflow-scrolling: touch;
+    }
+    .item-row {
+        padding: 11px 12px;
+    }
+    .item-row input {
+        width: 18px;
+        height: 18px;
+    }
+    .modal-footer {
+        flex-wrap: wrap;
+        padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+    }
+    .modal-footer .save-status {
+        width: 100%;
+        text-align: center;
+        min-width: 0;
+    }
+    .modal-footer .actions {
+        width: 100%;
+    }
+    .modal-footer .actions .btn {
+        flex: 1;
+        min-height: 42px;
+    }
+
+    .toasts {
+        left: 12px;
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+    }
+    .toast {
+        max-width: none;
+        width: 100%;
+        text-align: center;
+    }
+
+    /* Tela de cadastros no celular */
+    .page-container {
+        padding: 12px;
+    }
+    .tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar {
+        display: none;
+    }
+    .tab {
+        flex-shrink: 0;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+    .card {
+        padding: 14px;
+    }
+}
+
+/* Tabelas empilhadas em telas pequenas de smartphone (<= 640px) */
+@media (max-width: 640px) {
+    .data-table thead {
+        display: none;
+    }
+    .data-table, .data-table tbody, .data-table tr, .data-table td {
+        display: block;
+        width: 100%;
+    }
+    .data-table tr {
+        padding: 10px 0;
+        border-bottom: 1px solid #ECE7F4;
+    }
+    .data-table td {
+        padding: 4px 2px;
+        border-bottom: none;
+    }
+    .data-table td.acoes {
+        text-align: left;
+        padding-top: 8px;
+        display: flex;
+        gap: 8px;
+    }
+    .data-table td.acoes .btn {
+        flex: 1;
+        min-height: 38px;
+    }
+}
+
 /* ------------------------------------------------------------------ Impressão: A4 paisagem */
 
 .print-only { display: none; }
@@ -794,7 +1079,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
     .print-only { display: block; }
     .print-only-inline { display: inline; }
 
-    .sheet-wrapper { padding: 0; overflow: visible; }
+    .sheet-wrapper, .pei-grid-scroll { padding: 0; overflow: visible !important; }
     .sheet {
         box-shadow: none;
         border-radius: 0;
