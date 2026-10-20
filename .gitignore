@@ -1,0 +1,30 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Banco H2 local
+data/
+
+# Node / Vercel
+node_modules/
+.vercel/
+.env
+.env.*
+
+# IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# Logs e SO
+*.log
+.DS_Store
+Thumbs.db
+

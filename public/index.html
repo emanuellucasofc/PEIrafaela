@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PEI · Planejamento dos Atendimentos</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='7' height='7' rx='2' fill='%23F2542D'/%3E%3Crect x='9' width='7' height='7' rx='2' fill='%235A28B6'/%3E%3Crect y='9' width='7' height='7' rx='2' fill='%2334B257'/%3E%3Crect x='9' y='9' width='7' height='7' rx='2' fill='%23FFA800'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/css/pei.css">
+</head>
+<body>
+
+<!-- ============================ Barra de ferramentas ============================ -->
+<header class="toolbar no-print">
+    <a class="brand" href="/">
+        <div class="brand-logo" aria-hidden="true">
+            <span style="background:#F2542D"></span>
+            <span style="background:#001B71"></span>
+            <span style="background:#5A28B6"></span>
+            <span style="background:#FF59B3"></span>
+            <span style="background:#34B257"></span>
+            <span style="background:#D8DCFF"></span>
+        </div>
+        <div>
+            <h1>PLANEJAMENTO DOS ATENDIMENTOS</h1>
+            <small>PEI · Plano Educacional Individualizado</small>
+        </div>
+    </a>
+
+    <div class="toolbar-controls">
+        <label class="field-inline">Criança
+            <select id="selCrianca" class="select" aria-label="Selecionar criança"></select>
+        </label>
+        <label class="field-inline">Quadro
+            <select id="selQuadro" class="select" aria-label="Selecionar quadro"></select>
+        </label>
+        <button id="btnNovoQuadro" type="button" class="btn btn-ghost" title="Criar um novo quadro em branco para a criança">+ Novo quadro</button>
+        <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
+        <button id="btnSalvar" type="button" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Salvar Planejamento
+        </button>
+        <button id="btnImprimir" type="button" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Gerar PDF / Imprimir (Paisagem)
+        </button>
+        <a href="/cadastros" class="btn btn-outline">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            Gerenciar Banco de Dados (Cadastros)
+        </a>
+    </div>
+</header>
+
+<!-- ============================ Estado vazio ============================ -->
+<div class="empty-state" id="emptyState" hidden>
+    <h2>Nenhuma criança cadastrada</h2>
+    <p class="muted">Cadastre uma criança para começar a montar o planejamento dos atendimentos.</p>
+    <a href="/cadastros" class="btn btn-primary">Ir para Cadastros</a>
+</div>
+
+<!-- ============================ Quadro PEI ============================ -->
+<main class="sheet-wrapper" id="sheetMain">
+    <section class="sheet" id="sheet" aria-label="Quadro de planejamento dos atendimentos">
+        <div class="sheet-header">
+            <div>
+                <p class="sheet-title-main">PLANEJAMENTO DOS ATENDIMENTOS</p>
+                <input id="tituloQuadro" class="titulo-input" type="text" maxlength="200"
+                       aria-label="Título do quadro" placeholder="Título do planejamento">
+                <span id="tituloPrint" class="print-only titulo-print"></span>
+            </div>
+            <div class="sheet-meta">
+                Criança: <strong id="metaCrianca">—</strong>
+                &nbsp;·&nbsp; Criado em: <span id="metaData">—</span>
+            </div>
+        </div>
+
+        <div class="pei-grid" id="peiGrid" style="--cols:11">
+            <!-- Linha 1: PROGRAMAS -->
+            <div class="row-label">PROGRAMAS:</div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="0" data-linha="PROGRAMA" aria-label="Programa da coluna 1"><div class="programa-bloco" style="background:#F2542D"><span class="programa-placeholder">+ Programa</span></div></div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="1" data-linha="PROGRAMA" aria-label="Programa da coluna 2"><div class="programa-bloco" style="background:#001B71"><span class="programa-placeholder">+ Programa</span></div></div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="2" data-linha="PROGRAMA" aria-label="Programa da coluna 3"><div class="programa-bloco" style="background:#5A28B6"><span class="programa-placeholder">+ Programa</span></div></div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="3" data-linha="PROGRAMA" aria-label="Programa da coluna 4"><div class="programa-bloco" style="background:#FF59B3"><span class="programa-placeholder">+ Programa</span></div></div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="4" data-linha="PROGRAMA" aria-label="Programa da coluna 5"><div class="programa-bloco" style="background:#34B257"><span class="programa-placeholder">+ Programa</span></div></div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="5" data-linha="PROGRAMA" aria-label="Programa da coluna 6"><div class="programa-bloco texto-escuro" style="background:#D8DCFF"><span class="programa-placeholder">+ Programa</span></div></div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="6" data-linha="PROGRAMA" aria-label="Programa da coluna 7"><div class="programa-bloco" style="background:#FFA800"><span class="programa-placeholder">+ Programa</span></div></div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="7" data-linha="PROGRAMA" aria-label="Programa da coluna 8"><div class="programa-bloco" style="background:#5A28B6"><span class="programa-placeholder">+ Programa</span></div></div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="8" data-linha="PROGRAMA" aria-label="Programa da coluna 9"><div class="programa-bloco" style="background:#001B71"><span class="programa-placeholder">+ Programa</span></div></div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="9" data-linha="PROGRAMA" aria-label="Programa da coluna 10"><div class="programa-bloco" style="background:#F2542D"><span class="programa-placeholder">+ Programa</span></div></div>
+            <div class="cell cell-programa" tabindex="0" role="button" data-col="10" data-linha="PROGRAMA" aria-label="Programa da coluna 11"><div class="programa-bloco" style="background:#5A28B6"><span class="programa-placeholder">+ Programa</span></div></div>
+
+            <!-- Linha 2: RECURSOS -->
+            <div class="row-label">RECURSOS A SEREM UTILIZADOS:</div>
+            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="0" data-linha="RECURSO" aria-label="Recursos da coluna 1"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="1" data-linha="RECURSO" aria-label="Recursos da coluna 2"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="2" data-linha="RECURSO" aria-label="Recursos da coluna 3"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="3" data-linha="RECURSO" aria-label="Recursos da coluna 4"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="4" data-linha="RECURSO" aria-label="Recursos da coluna 5"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="5" data-linha="RECURSO" aria-label="Recursos da coluna 6"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="6" data-linha="RECURSO" aria-label="Recursos da coluna 7"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="7" data-linha="RECURSO" aria-label="Recursos da coluna 8"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="8" data-linha="RECURSO" aria-label="Recursos da coluna 9"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="9" data-linha="RECURSO" aria-label="Recursos da coluna 10"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-first col-last" tabindex="0" role="button" data-col="10" data-linha="RECURSO" aria-label="Recursos da coluna 11"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+
+            <!-- Linha 3: ATIVIDADES -->
+            <div class="row-label">ATIVIDADES PLANEJADAS:</div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="0" data-linha="ATIVIDADE" aria-label="Atividades da coluna 1"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="1" data-linha="ATIVIDADE" aria-label="Atividades da coluna 2"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="2" data-linha="ATIVIDADE" aria-label="Atividades da coluna 3"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="3" data-linha="ATIVIDADE" aria-label="Atividades da coluna 4"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="4" data-linha="ATIVIDADE" aria-label="Atividades da coluna 5"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="5" data-linha="ATIVIDADE" aria-label="Atividades da coluna 6"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="6" data-linha="ATIVIDADE" aria-label="Atividades da coluna 7"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="7" data-linha="ATIVIDADE" aria-label="Atividades da coluna 8"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="8" data-linha="ATIVIDADE" aria-label="Atividades da coluna 9"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="9" data-linha="ATIVIDADE" aria-label="Atividades da coluna 10"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink col-last" tabindex="0" role="button" data-col="10" data-linha="ATIVIDADE" aria-label="Atividades da coluna 11"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+
+            <!-- Linha 4: PREFERÊNCIAS -->
+            <div class="row-label">PREFERÊNCIAS DA CRIANÇA</div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="0" data-linha="PREFERENCIA" aria-label="Preferências da coluna 1"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="1" data-linha="PREFERENCIA" aria-label="Preferências da coluna 2"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="2" data-linha="PREFERENCIA" aria-label="Preferências da coluna 3"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="3" data-linha="PREFERENCIA" aria-label="Preferências da coluna 4"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="4" data-linha="PREFERENCIA" aria-label="Preferências da coluna 5"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="5" data-linha="PREFERENCIA" aria-label="Preferências da coluna 6"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="6" data-linha="PREFERENCIA" aria-label="Preferências da coluna 7"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="7" data-linha="PREFERENCIA" aria-label="Preferências da coluna 8"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="8" data-linha="PREFERENCIA" aria-label="Preferências da coluna 9"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink" tabindex="0" role="button" data-col="9" data-linha="PREFERENCIA" aria-label="Preferências da coluna 10"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink col-last" tabindex="0" role="button" data-col="10" data-linha="PREFERENCIA" aria-label="Preferências da coluna 11"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+
+            <!-- Linha 5: OBSERVAÇÕES -->
+            <div class="row-label row-last">OBSERVAÇÕES:</div>
+            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="0" data-linha="OBSERVACAO" aria-label="Observações da coluna 1"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="1" data-linha="OBSERVACAO" aria-label="Observações da coluna 2"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="2" data-linha="OBSERVACAO" aria-label="Observações da coluna 3"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="3" data-linha="OBSERVACAO" aria-label="Observações da coluna 4"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="4" data-linha="OBSERVACAO" aria-label="Observações da coluna 5"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="5" data-linha="OBSERVACAO" aria-label="Observações da coluna 6"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="6" data-linha="OBSERVACAO" aria-label="Observações da coluna 7"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="7" data-linha="OBSERVACAO" aria-label="Observações da coluna 8"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="8" data-linha="OBSERVACAO" aria-label="Observações da coluna 9"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="9" data-linha="OBSERVACAO" aria-label="Observações da coluna 10"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+            <div class="cell cell-pink row-last col-last" tabindex="0" role="button" data-col="10" data-linha="OBSERVACAO" aria-label="Observações da coluna 11"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
+        </div>
+    </section>
+</main>
+
+<!-- ============================ Modal de seleção ============================ -->
+<div class="modal-backdrop no-print" id="modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+        <header class="modal-header" id="modalHeader">
+            <div>
+                <span class="modal-kicker" id="modalKicker">Coluna 1</span>
+                <h2 id="modalTitulo">Selecionar itens</h2>
+            </div>
+            <button type="button" class="icon-btn" data-close aria-label="Fechar">&times;</button>
+        </header>
+
+        <div class="modal-body">
+            <div class="contexto-programa" id="contextoPrograma" hidden></div>
+
+            <div>
+                <p class="section-title">Selecionados neste quadrado</p>
+                <div class="selecionados" id="selecionados"></div>
+            </div>
+
+            <div>
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input id="buscaItem" class="input" type="search" placeholder="Pesquisar no banco de dados..." autocomplete="off" aria-label="Pesquisar itens">
+                </div>
+            </div>
+
+            <div class="item-list" id="listaItens" role="group" aria-label="Itens do catálogo"></div>
+
+            <details class="quick-add" id="quickAdd">
+                <summary>+ Cadastrar Novo Item no Banco</summary>
+                <form class="quick-add-form" id="quickAddForm" novalidate>
+                    <div>
+                        <label class="form-label" for="qaTitulo">Título *</label>
+                        <input id="qaTitulo" class="input" type="text" maxlength="200" required>
+                    </div>
+                    <div>
+                        <label class="form-label" for="qaDescricao">Descrição</label>
+                        <input id="qaDescricao" class="input" type="text" maxlength="1000">
+                    </div>
+                    <div id="qaVinculoWrap" hidden>
+                        <label class="form-label" for="qaPrograma">Vincular ao programa</label>
+                        <select id="qaPrograma" class="select" style="width:100%"></select>
+                    </div>
+                    <div class="row-actions">
+                        <button type="submit" class="btn btn-primary btn-sm">Cadastrar e selecionar</button>
+                    </div>
+                </form>
+            </details>
+
+            <div>
+                <label class="form-label" for="textoLivre">Anotação livre (complemento do profissional)</label>
+                <textarea id="textoLivre" class="textarea" maxlength="4000" placeholder="Ex.: realizar 3 tentativas, usar reforço imediato..."></textarea>
+            </div>
+
+            <div id="corWrap" hidden>
+                <p class="section-title">Cor da coluna</p>
+                <div class="paleta-swatches" id="paletaSwatches"></div>
+            </div>
+        </div>
+
+        <footer class="modal-footer">
+            <span id="modalStatus" class="save-status" style="text-align:left"></span>
+            <div class="actions">
+                <button type="button" class="btn btn-danger btn-sm" id="btnLimparCelula">Limpar quadrado</button>
+                <button type="button" class="btn btn-primary btn-sm" data-close>Concluir</button>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<div class="toasts no-print" id="toasts" aria-live="polite"></div>
+
+<script>
+    window.PEI_CONFIG = {
+        totalColunas: 11,
+        paleta: ["#F2542D", "#001B71", "#5A28B6", "#FF59B3", "#34B257", "#D8DCFF", "#FFA800", "#5A28B6", "#001B71", "#F2542D", "#5A28B6"],
+        criancaSelecionada: null
+    };
+</script>
+<script src="/js/api.js"></script>
+<script src="/js/quadro.js"></script>
+</body>
+</html>

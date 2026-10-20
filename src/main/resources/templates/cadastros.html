@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PEI · Gerenciar Banco de Dados (Cadastros)</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='7' height='7' rx='2' fill='%23F2542D'/%3E%3Crect x='9' width='7' height='7' rx='2' fill='%235A28B6'/%3E%3Crect y='9' width='7' height='7' rx='2' fill='%2334B257'/%3E%3Crect x='9' y='9' width='7' height='7' rx='2' fill='%23FFA800'/%3E%3C/svg%3E">
+    <link rel="stylesheet" th:href="@{/css/pei.css}">
+</head>
+<body>
+
+<!-- ============================ Barra superior ============================ -->
+<header class="toolbar">
+    <a class="brand" th:href="@{/}">
+        <div class="brand-logo" aria-hidden="true">
+            <span style="background:#F2542D"></span>
+            <span style="background:#001B71"></span>
+            <span style="background:#5A28B6"></span>
+            <span style="background:#FF59B3"></span>
+            <span style="background:#34B257"></span>
+            <span style="background:#FFA800"></span>
+        </div>
+        <div>
+            <h1>GERENCIAR BANCO DE DADOS (CADASTROS)</h1>
+            <small>Crianças, Programas, Recursos, Atividades, Preferências e Observações</small>
+        </div>
+    </a>
+
+    <div class="toolbar-controls">
+        <a th:href="@{/}" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            Voltar ao Quadro PEI
+        </a>
+    </div>
+</header>
+
+<main class="page-container">
+
+    <!-- ============================ Abas ============================ -->
+    <nav class="tabs" id="tabs" aria-label="Categorias de cadastro">
+        <button type="button" class="tab ativo" data-tab="CRIANCA">
+            Crianças / Pacientes <span class="count" data-count="CRIANCA">0</span>
+        </button>
+        <button type="button" class="tab" th:each="c : ${categorias}"
+                th:attr="data-tab=${c.name()},data-vinculo=${c.aceitaVinculoPrograma()},data-nome=${c.nomePlural}">
+            <span th:text="${c.nomePlural}">Categoria</span>
+            <span class="count" th:attr="data-count=${c.name()}">0</span>
+        </button>
+    </nav>
+
+    <!-- ============================ Aba: Crianças ============================ -->
+    <section id="secCrianca" class="crud-layout">
+        <div class="card">
+            <h3 id="tituloFormCrianca">Cadastrar Criança / Paciente</h3>
+            <form id="formCrianca" class="form-grid" novalidate>
+                <input type="hidden" id="criancaId">
+                <div>
+                    <label class="form-label" for="criancaNome">Nome completo *</label>
+                    <input id="criancaNome" class="input" type="text" maxlength="150" required placeholder="Ex.: Ana Clara Souza">
+                </div>
+                <div>
+                    <label class="form-label" for="criancaNasc">Data de nascimento</label>
+                    <input id="criancaNasc" class="input" type="date">
+                </div>
+                <div>
+                    <label class="form-label" for="criancaPref">Preferências padrão</label>
+                    <textarea id="criancaPref" class="textarea" maxlength="2000" placeholder="Reforçadores e interesses frequentes da criança..."></textarea>
+                </div>
+                <div>
+                    <label class="form-label" for="criancaObs">Observações gerais</label>
+                    <textarea id="criancaObs" class="textarea" maxlength="4000" placeholder="Informações clínicas, comunicação, perfil sensorial..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" id="btnCancelarCrianca" hidden>Cancelar edição</button>
+                    <button type="submit" class="btn btn-primary" id="btnSalvarCrianca">Salvar Criança</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="list-toolbar">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input id="buscaCrianca" class="input" type="search" placeholder="Filtrar crianças por nome..." aria-label="Filtrar crianças">
+                </div>
+            </div>
+            <table class="data-table" aria-label="Crianças cadastradas">
+                <thead>
+                <tr>
+                    <th>Nome / Nascimento</th>
+                    <th>Preferências e Observações</th>
+                    <th class="acoes">Ações</th>
+                </tr>
+                </thead>
+                <tbody id="tbodyCriancas"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ============================ Aba: Catálogo ============================ -->
+    <section id="secCatalogo" class="crud-layout" hidden>
+        <div class="card">
+            <h3 id="tituloFormItem">Cadastrar Item</h3>
+            <form id="formItem" class="form-grid" novalidate>
+                <input type="hidden" id="itemId">
+                <div>
+                    <label class="form-label" for="itemTitulo">Título *</label>
+                    <input id="itemTitulo" class="input" type="text" maxlength="200" required placeholder="Título exibido no quadrado do PEI">
+                </div>
+                <div>
+                    <label class="form-label" for="itemDescricao">Descrição / Orientações</label>
+                    <textarea id="itemDescricao" class="textarea" maxlength="1000" placeholder="Descrição opcional para apoiar a escolha no modal..."></textarea>
+                </div>
+                <div id="wrapVinculoPrograma" hidden>
+                    <label class="form-label" for="itemPrograma">Programa vinculado (sugestão automática)</label>
+                    <select id="itemPrograma" class="select" style="width:100%"></select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" id="btnCancelarItem" hidden>Cancelar edição</button>
+                    <button type="submit" class="btn btn-primary" id="btnSalvarItem">Salvar Item</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="list-toolbar">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input id="buscaCatalogo" class="input" type="search" placeholder="Pesquisar itens..." aria-label="Pesquisar itens do catálogo">
+                </div>
+                <select id="filtroPrograma" class="select" aria-label="Filtrar por programa vinculado" hidden>
+                    <option value="">Todos os programas</option>
+                </select>
+            </div>
+            <table class="data-table" aria-label="Itens do catálogo">
+                <thead>
+                <tr>
+                    <th>Título / Descrição</th>
+                    <th id="thPrograma" hidden>Programa vinculado</th>
+                    <th class="acoes">Ações</th>
+                </tr>
+                </thead>
+                <tbody id="tbodyItens"></tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/cadastros.js}"></script>
+</body>
+</html>
+

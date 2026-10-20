@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PEI · Planejamento dos Atendimentos</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='7' height='7' rx='2' fill='%23F2542D'/%3E%3Crect x='9' width='7' height='7' rx='2' fill='%235A28B6'/%3E%3Crect y='9' width='7' height='7' rx='2' fill='%2334B257'/%3E%3Crect x='9' y='9' width='7' height='7' rx='2' fill='%23FFA800'/%3E%3C/svg%3E">
+    <link rel="stylesheet" th:href="@{/css/pei.css}">
+</head>
+<body>
+
+<!-- ============================ Barra de ferramentas ============================ -->
+<header class="toolbar no-print">
+    <a class="brand" th:href="@{/}">
+        <div class="brand-logo" aria-hidden="true">
+            <span th:each="cor, st : ${paleta}" th:if="${st.index < 6}" th:style="'background:' + ${cor}"></span>
+        </div>
+        <div>
+            <h1>PLANEJAMENTO DOS ATENDIMENTOS</h1>
+            <small>PEI · Plano Educacional Individualizado</small>
+        </div>
+    </a>
+
+    <div class="toolbar-controls">
+        <label class="field-inline">Criança
+            <select id="selCrianca" class="select" aria-label="Selecionar criança">
+                <option th:each="c : ${criancas}" th:value="${c.id}" th:text="${c.nome}"
+                        th:selected="${criancaSelecionada != null && criancaSelecionada == c.id}"></option>
+            </select>
+        </label>
+        <label class="field-inline">Quadro
+            <select id="selQuadro" class="select" aria-label="Selecionar quadro"></select>
+        </label>
+        <button id="btnNovoQuadro" type="button" class="btn btn-ghost" title="Criar um novo quadro em branco para a criança">+ Novo quadro</button>
+        <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
+        <button id="btnSalvar" type="button" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Salvar Planejamento
+        </button>
+        <button id="btnImprimir" type="button" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Gerar PDF / Imprimir (Paisagem)
+        </button>
+        <a th:href="@{/cadastros}" class="btn btn-outline">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            Gerenciar Banco de Dados (Cadastros)
+        </a>
+    </div>
+</header>
+
+<!-- ============================ Estado vazio ============================ -->
+<div class="empty-state" th:if="${#lists.isEmpty(criancas)}">
+    <h2>Nenhuma criança cadastrada</h2>
+    <p class="muted">Cadastre uma criança para começar a montar o planejamento dos atendimentos.</p>
+    <a th:href="@{/cadastros}" class="btn btn-primary">Ir para Cadastros</a>
+</div>
+
+<!-- ============================ Quadro PEI ============================ -->
+<main class="sheet-wrapper" th:unless="${#lists.isEmpty(criancas)}">
+    <section class="sheet" id="sheet" aria-label="Quadro de planejamento dos atendimentos">
+        <div class="sheet-header">
+            <div>
+                <p class="sheet-title-main">PLANEJAMENTO DOS ATENDIMENTOS</p>
+                <input id="tituloQuadro" class="titulo-input" type="text" maxlength="200"
+                       aria-label="Título do quadro" placeholder="Título do planejamento">
+                <span id="tituloPrint" class="print-only titulo-print"></span>
+            </div>
+            <div class="sheet-meta">
+                Criança: <strong id="metaCrianca">—</strong>
+                &nbsp;·&nbsp; Criado em: <span id="metaData">—</span>
+            </div>
+        </div>
+
+        <div class="pei-grid" id="peiGrid" th:style="'--cols:' + ${totalColunas}">
+            <th:block th:each="cat, rowSt : ${categorias}">
+                <!-- Rótulo fixo da linha -->
+                <div class="row-label" th:classappend="${rowSt.last} ? 'row-last'"
+                     th:text="${cat.rotuloLinha}">RÓTULO</div>
+
+                <!-- 11 quadrados da linha -->
+                <th:block th:each="col : ${#numbers.sequence(0, totalColunas - 1)}">
+                    <div th:if="${cat.name() == 'PROGRAMA'}"
+                         class="cell cell-programa" tabindex="0" role="button"
+                         th:attr="data-col=${col},data-linha=${cat.name()},aria-label='Programa da coluna ' + ${col + 1}">
+                        <div class="programa-bloco" th:style="'background:' + ${paleta[col]}"
+                             th:classappend="${paleta[col] == '#D8DCFF'} ? 'texto-escuro'">
+                            <span class="programa-placeholder">+ Programa</span>
+                        </div>
+                    </div>
+                    <div th:unless="${cat.name() == 'PROGRAMA'}"
+                         class="cell cell-pink" tabindex="0" role="button"
+                         th:classappend="|${col == totalColunas - 1 ? 'col-last' : ''} ${rowSt.last ? 'row-last' : ''} ${rowSt.index == 1 ? 'row-first' : ''}|"
+                         th:attr="data-col=${col},data-linha=${cat.name()},aria-label=${cat.nomePlural} + ' da coluna ' + ${col + 1}">
+                        <div class="cell-content"></div>
+                        <span class="cell-hint no-print">+ Adicionar</span>
+                    </div>
+                </th:block>
+            </th:block>
+        </div>
+    </section>
+</main>
+
+<!-- ============================ Modal de seleção ============================ -->
+<div class="modal-backdrop no-print" id="modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+        <header class="modal-header" id="modalHeader">
+            <div>
+                <span class="modal-kicker" id="modalKicker">Coluna 1</span>
+                <h2 id="modalTitulo">Selecionar itens</h2>
+            </div>
+            <button type="button" class="icon-btn" data-close aria-label="Fechar">&times;</button>
+        </header>
+
+        <div class="modal-body">
+            <div class="contexto-programa" id="contextoPrograma" hidden></div>
+
+            <div>
+                <p class="section-title">Selecionados neste quadrado</p>
+                <div class="selecionados" id="selecionados"></div>
+            </div>
+
+            <div>
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input id="buscaItem" class="input" type="search" placeholder="Pesquisar no banco de dados..." autocomplete="off" aria-label="Pesquisar itens">
+                </div>
+            </div>
+
+            <div class="item-list" id="listaItens" role="group" aria-label="Itens do catálogo"></div>
+
+            <details class="quick-add" id="quickAdd">
+                <summary>+ Cadastrar Novo Item no Banco</summary>
+                <form class="quick-add-form" id="quickAddForm" novalidate>
+                    <div>
+                        <label class="form-label" for="qaTitulo">Título *</label>
+                        <input id="qaTitulo" class="input" type="text" maxlength="200" required>
+                    </div>
+                    <div>
+                        <label class="form-label" for="qaDescricao">Descrição</label>
+                        <input id="qaDescricao" class="input" type="text" maxlength="1000">
+                    </div>
+                    <div id="qaVinculoWrap" hidden>
+                        <label class="form-label" for="qaPrograma">Vincular ao programa</label>
+                        <select id="qaPrograma" class="select" style="width:100%"></select>
+                    </div>
+                    <div class="row-actions">
+                        <button type="submit" class="btn btn-primary btn-sm">Cadastrar e selecionar</button>
+                    </div>
+                </form>
+            </details>
+
+            <div>
+                <label class="form-label" for="textoLivre">Anotação livre (complemento do profissional)</label>
+                <textarea id="textoLivre" class="textarea" maxlength="4000" placeholder="Ex.: realizar 3 tentativas, usar reforço imediato..."></textarea>
+            </div>
+
+            <div id="corWrap" hidden>
+                <p class="section-title">Cor da coluna</p>
+                <div class="paleta-swatches" id="paletaSwatches"></div>
+            </div>
+        </div>
+
+        <footer class="modal-footer">
+            <span id="modalStatus" class="save-status" style="text-align:left"></span>
+            <div class="actions">
+                <button type="button" class="btn btn-danger btn-sm" id="btnLimparCelula">Limpar quadrado</button>
+                <button type="button" class="btn btn-primary btn-sm" data-close>Concluir</button>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<div class="toasts no-print" id="toasts" aria-live="polite"></div>
+
+<script th:inline="javascript">
+    window.PEI_CONFIG = {
+        totalColunas: /*[[${totalColunas}]]*/ 11,
+        paleta: /*[[${paleta}]]*/ [],
+        criancaSelecionada: /*[[${criancaSelecionada}]]*/ null
+    };
+</script>
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/quadro.js}"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "pei-rafaela",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PEI - Plano Educacional Individualizado (Spring Boot + Vercel Serverless / Supabase Postgres)",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}
