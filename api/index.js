@@ -46,24 +46,75 @@ function getConnectionString() {
     ).trim();
 }
 
-function getPool() {
-    if (pool) return pool;
-    const rawUrl = getConnectionString();
-    if (!rawUrl) {
-        const err = new Error(
-            'Banco de dados não configurado. Defina a variável DATABASE_URL (ou POSTGRES_URL) nas configurações do projeto na Vercel com a Connection String do Supabase.'
+function parseDbConfig(rawInput) {
+    let raw = (rawInput || '').trim();
+    if (!raw) {
+        throw httpError(
+            500,
+            'Banco de dados não configurado. Defina a variável DATABASE_URL nas configurações da Vercel com a URI do Supabase.'
         );
-        err.status = 500;
-        throw err;
     }
-    // Remove sslmode da query string para evitar conflito com ssl: { rejectUnauthorized: false } no pg
-    const connStr = rawUrl.replace(/([?&])sslmode=[^&]*(&|$)/i, (m, p1, p2) => (p2 ? p1 : ''));
-    const isLocal = /localhost|127\.0\.0\.1/.test(connStr);
-    pool = new Pool({
-        connectionString: connStr,
+
+    // Remove eventual prefixo "DATABASE_URL=", aspas externas ou prefixo "jdbc:"
+    raw = raw.replace(/^[A-Z0-9_]+\s*=\s*/i, '').trim();
+    raw = raw.replace(/^['"]+|['"]+$/g, '').trim();
+    raw = raw.replace(/^jdbc:/i, '');
+
+    if (/^https?:\/\//i.test(raw)) {
+        throw httpError(
+            500,
+            'A variável DATABASE_URL contém uma URL https:// (URL da API do projeto) em vez da URI PostgreSQL. No Supabase, clique em Connect -> URI e copie a string que começa com postgresql://postgres...'
+        );
+    }
+
+    // Extrai user, password (mesmo com @, colchetes ou caracteres especiais), host, port e database
+    const m = /^postgres(?:ql)?:\/\/([^:\/]+):(.+)@([^@\/:?#]+)(?::(\d+))?\/([^?#]*)/i.exec(raw);
+    if (!m) {
+        throw httpError(
+            500,
+            'Formato de DATABASE_URL inválido. Use a URI do Supabase no formato: postgresql://postgres.[PROJETO]:SUA_SENHA@aws-0-....pooler.supabase.com:6543/postgres'
+        );
+    }
+
+    const user = decodeURIComponent(m[1]);
+    let password = m[2];
+    // Caso o usuário tenha mantido os colchetes do template do Supabase: [SUA-SENHA]
+    if (password.startsWith('[') && password.endsWith(']')) {
+        password = password.slice(1, -1);
+    }
+    try {
+        password = decodeURIComponent(password);
+    } catch (_) {
+        // mantém literal se contiver % não escapado
+    }
+
+    if (/^(YOUR-PASSWORD|SUA-SENHA)$/i.test(password)) {
+        throw httpError(
+            500,
+            'Substitua [YOUR-PASSWORD] pela senha real do banco de dados do Supabase na variável DATABASE_URL da Vercel.'
+        );
+    }
+
+    const host = m[3];
+    const port = m[4] ? Number(m[4]) : 5432;
+    const database = (m[5] || 'postgres').trim() || 'postgres';
+    const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(host);
+
+    return {
+        user,
+        password,
+        host,
+        port,
+        database,
         max: 5,
         ssl: isLocal ? false : { rejectUnauthorized: false }
-    });
+    };
+}
+
+function getPool() {
+    if (pool) return pool;
+    const cfg = parseDbConfig(getConnectionString());
+    pool = new Pool(cfg);
     return pool;
 }
 
@@ -806,3 +857,4 @@ module.exports = async function handler(req, res) {
         });
     }
 };
+
