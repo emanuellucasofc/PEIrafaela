@@ -67,10 +67,20 @@
                        aria-label="Título do quadro" placeholder="Título do planejamento">
                 <span id="tituloPrint" class="print-only titulo-print"></span>
             </div>
-            <div class="sheet-meta">
-                Criança: <strong id="metaCrianca">—</strong>
-                &nbsp;·&nbsp; Criado em: <span id="metaData">—</span>
+            <div class="sheet-header-right">
+                <button id="btnAdicionarPrograma" type="button" class="btn btn-primary btn-sm no-print">
+                    + Adicionar Programa
+                </button>
+                <div class="sheet-meta">
+                    Criança: <strong id="metaCrianca">—</strong>
+                    &nbsp;·&nbsp; Criado em: <span id="metaData">—</span>
+                </div>
             </div>
+        </div>
+
+        <div id="semProgramasBox" class="sem-programas-box no-print" hidden>
+            <p>Nenhum programa adicionado neste quadro ainda.</p>
+            <button type="button" class="btn btn-primary" id="btnPrimeiroPrograma">+ Adicionar Programa</button>
         </div>
 
         <div class="pei-grid" id="peiGrid" style="--cols:11">
@@ -230,3 +240,4 @@
 <script src="/js/quadro.js"></script>
 </body>
 </html>
+

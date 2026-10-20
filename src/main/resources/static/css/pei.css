@@ -183,6 +183,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
     margin-bottom: 14px;
 }
 
+.sheet-header-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+}
+
+.sem-programas-box {
+    border: 2px dashed var(--rosa-borda);
+    background: #FFF7F8;
+    border-radius: 12px;
+    padding: 36px 24px;
+    text-align: center;
+    color: var(--texto-celula);
+}
+.sem-programas-box p {
+    margin: 0 0 14px;
+    font-size: 14.5px;
+    font-weight: 600;
+}
+
 .sheet-title-main {
     margin: 0 0 2px;
     font-size: 13px;

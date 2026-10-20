@@ -46,3 +46,4 @@ CREATE TABLE IF NOT EXISTS celula_itens (
     ordem INTEGER NOT NULL,
     PRIMARY KEY (celula_id, ordem)
 );
+

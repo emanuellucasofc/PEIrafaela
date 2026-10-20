@@ -34,6 +34,9 @@
         tituloPrint: $('tituloPrint'),
         metaCrianca: $('metaCrianca'),
         metaData: $('metaData'),
+        btnAddPrograma: $('btnAdicionarPrograma'),
+        btnPrimeiroPrograma: $('btnPrimeiroPrograma'),
+        semProgramasBox: $('semProgramasBox'),
         // modal
         modal: $('modal'),
         modalHeader: $('modalHeader'),
@@ -127,6 +130,64 @@
     function renderTodas() {
         els.grid.querySelectorAll('.cell').forEach(el =>
             renderCelula(el.dataset.linha, Number(el.dataset.col)));
+        atualizarColunasVisiveis();
+    }
+
+    function colunaTemPrograma(col) {
+        const c = getCelula('PROGRAMA', col);
+        return Boolean((c.itensSelecionados && c.itensSelecionados.length > 0) || (c.textoLivre && c.textoLivre.trim()));
+    }
+
+    function atualizarColunasVisiveis() {
+        const total = CFG.totalColunas || 11;
+        const visiveis = [];
+        for (let col = 0; col < total; col++) {
+            const emEdicaoNoModal = !els.modal.hidden && modal.col === col;
+            if (colunaTemPrograma(col) || emEdicaoNoModal) {
+                visiveis.push(col);
+            }
+        }
+        const setVisiveis = new Set(visiveis);
+        const ultimaVisivel = visiveis.length ? visiveis[visiveis.length - 1] : -1;
+
+        els.grid.querySelectorAll('.cell').forEach(el => {
+            const col = Number(el.dataset.col);
+            const visivel = setVisiveis.has(col);
+            el.hidden = !visivel;
+            if (el.classList.contains('cell-pink')) {
+                el.classList.toggle('col-last', col === ultimaVisivel);
+            }
+        });
+
+        const semProgramas = visiveis.length === 0;
+        els.grid.hidden = semProgramas;
+        if (els.semProgramasBox) els.semProgramasBox.hidden = !semProgramas;
+        if (!semProgramas) {
+            els.grid.style.setProperty('--cols', String(visiveis.length));
+        }
+
+        if (els.btnAddPrograma) {
+            const ocupadas = Array.from({ length: total }, (_, i) => i).filter(colunaTemPrograma).length;
+            els.btnAddPrograma.disabled = ocupadas >= total;
+        }
+    }
+
+    function adicionarPrograma() {
+        if (!state.quadro) return;
+        const total = CFG.totalColunas || 11;
+        let livre = -1;
+        for (let col = 0; col < total; col++) {
+            if (!colunaTemPrograma(col)) {
+                livre = col;
+                break;
+            }
+        }
+        if (livre === -1) {
+            toast('Todas as 11 colunas de programas já foram preenchidas.', 'erro');
+            return;
+        }
+        abrirModal('PROGRAMA', livre, els.btnAddPrograma);
+        atualizarColunasVisiveis();
     }
 
     function renderCelula(linha, col) {
@@ -143,7 +204,7 @@
             bloco.classList.toggle('texto-escuro', corClara(cor));
             bloco.innerHTML = (itens.length || texto)
                 ? itens.map(i => `<span class="programa-titulo">${esc(i.titulo)}</span>`).join('') + texto
-                : '<span class="programa-placeholder">+ Programa</span>';
+                : '';
         } else {
             el.querySelector('.cell-content').innerHTML =
                 itens.map(i => `<span class="chip">${esc(i.titulo)}</span>`).join('') + texto;
@@ -527,6 +588,9 @@
         els.textoLivre.value = '';
         alterou(true);
         renderLista();
+        if (modal.linha === 'PROGRAMA') {
+            fecharModal();
+        }
     }
 
     function fecharModal() {
@@ -538,7 +602,8 @@
         }
         els.modal.hidden = true;
         document.body.style.overflow = '';
-        if (modal.origem) modal.origem.focus();
+        atualizarColunasVisiveis();
+        if (modal.origem && !modal.origem.hidden) modal.origem.focus();
     }
 
     // =================================================================== eventos
@@ -604,6 +669,8 @@
     els.selCrianca.addEventListener('change', () => carregarCrianca(els.selCrianca.value));
     els.selQuadro.addEventListener('change', () => carregarCrianca(els.selCrianca.value, els.selQuadro.value));
     els.btnNovo.addEventListener('click', novoQuadro);
+    if (els.btnAddPrograma) els.btnAddPrograma.addEventListener('click', adicionarPrograma);
+    if (els.btnPrimeiroPrograma) els.btnPrimeiroPrograma.addEventListener('click', adicionarPrograma);
     els.btnSalvar.addEventListener('click', salvarPlanejamento);
     els.btnImprimir.addEventListener('click', () => {
         els.tituloPrint.textContent = els.titulo.value;
