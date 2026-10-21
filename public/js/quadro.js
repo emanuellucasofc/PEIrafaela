@@ -35,7 +35,7 @@
         titulo: $('tituloQuadro'),
         tituloPrint: $('tituloPrint'),
         dataInicio: $('dataInicioQuadro'),
-        dataFim: $('dataFimQuadro'),
+        diaSemana: $('diaSemanaQuadro'),
         metaPeriodoPrint: $('metaPeriodoPrint'),
         metaCrianca: $('metaCrianca'),
         metaData: $('metaData'),
@@ -97,6 +97,30 @@
         }
     }
 
+    const DIAS_SEMANA = [
+        'domingo',
+        'segunda-feira',
+        'terça-feira',
+        'quarta-feira',
+        'quinta-feira',
+        'sexta-feira',
+        'sábado'
+    ];
+
+    function diaDaSemana(iso) {
+        if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return '';
+        const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+        const dt = new Date(Date.UTC(y, m - 1, d));
+        return DIAS_SEMANA[dt.getUTCDay()] || '';
+    }
+
+    function formatarDataComDiaSemana(iso) {
+        if (!iso) return '—';
+        const dataFmt = formatarData(iso);
+        const dia = diaDaSemana(iso);
+        return dia ? `${dataFmt} - ${dia}` : dataFmt;
+    }
+
     function limparTituloPadrao(titulo) {
         if (!titulo) return 'Planejamento dos Atendimentos';
         return titulo
@@ -106,18 +130,8 @@
 
     function rotuloOpcaoQuadro(q) {
         const base = limparTituloPadrao(q.titulo);
-        const di = q.dataInicio ? formatarData(q.dataInicio) : null;
-        const df = q.dataFim ? formatarData(q.dataFim) : null;
-        if (di && df) {
-            return `${base} (do dia ${di} até o dia ${df})`;
-        }
-        if (di) {
-            return `${base} (a partir do dia ${di})`;
-        }
-        if (df) {
-            return `${base} (até o dia ${df})`;
-        }
-        return `${base} (${formatarData(q.dataCriacao)})`;
+        const dataRef = q.dataInicio || q.dataCriacao;
+        return `${base} (${formatarDataComDiaSemana(dataRef)})`;
     }
 
     function renderSeletorQuadros(quadros, selecionadoId) {
@@ -134,8 +148,8 @@
         const tituloLimpo = limparTituloPadrao(q.titulo);
         els.titulo.value = tituloLimpo;
         els.tituloPrint.textContent = tituloLimpo;
-        if (els.dataInicio) els.dataInicio.value = q.dataInicio || '';
-        if (els.dataFim) els.dataFim.value = q.dataFim || '';
+        const dataAtendimento = q.dataInicio || q.dataCriacao || '';
+        if (els.dataInicio) els.dataInicio.value = dataAtendimento;
         els.metaCrianca.textContent = q.criancaNome;
         atualizarTextoPeriodoPrint();
         atualizarOpcaoQuadro(q);
@@ -177,18 +191,17 @@
     }
 
     function atualizarTextoPeriodoPrint() {
-        const di = els.dataInicio && els.dataInicio.value ? formatarData(els.dataInicio.value) : null;
-        const df = els.dataFim && els.dataFim.value ? formatarData(els.dataFim.value) : null;
+        const iso = (els.dataInicio && els.dataInicio.value)
+            || (state.quadro && (state.quadro.dataInicio || state.quadro.dataCriacao))
+            || '';
+        const dia = diaDaSemana(iso);
+        if (els.diaSemana) {
+            els.diaSemana.textContent = dia ? `- ${dia}` : '';
+        }
         if (els.metaData) {
-            if (di && df) {
-                els.metaData.innerHTML = `Período: <strong>do dia ${esc(di)} até o dia ${esc(df)}</strong>`;
-            } else if (di) {
-                els.metaData.innerHTML = `Período: <strong>a partir do dia ${esc(di)}</strong>`;
-            } else if (df) {
-                els.metaData.innerHTML = `Período: <strong>até o dia ${esc(df)}</strong>`;
-            } else if (state.quadro) {
-                els.metaData.textContent = `Criado em: ${formatarData(state.quadro.dataCriacao)}`;
-            }
+            els.metaData.innerHTML = iso
+                ? `Data: <strong>${esc(formatarDataComDiaSemana(iso))}</strong>`
+                : '—';
         }
     }
 
@@ -550,7 +563,7 @@
             const payload = {
                 titulo: tituloLimpo,
                 dataInicio: els.dataInicio && els.dataInicio.value ? els.dataInicio.value : null,
-                dataFim: els.dataFim && els.dataFim.value ? els.dataFim.value : null,
+                dataFim: null,
                 celulas: Array.from(state.celulas.values()).map(payloadCelula)
             };
             const q = await api.put(`/api/quadros/${state.quadro.id}`, payload);
@@ -572,18 +585,16 @@
         const titulo = limparTituloPadrao(els.titulo.value.trim() || state.quadro.titulo);
         els.titulo.value = titulo;
         const dataInicio = els.dataInicio && els.dataInicio.value ? els.dataInicio.value : null;
-        const dataFim = els.dataFim && els.dataFim.value ? els.dataFim.value : null;
         atualizarTextoPeriodoPrint();
         atualizarOpcaoQuadro({
             ...state.quadro,
             titulo,
             dataInicio,
-            dataFim
+            dataFim: null
         });
 
         if (titulo === state.quadro.titulo
-            && dataInicio === (state.quadro.dataInicio || null)
-            && dataFim === (state.quadro.dataFim || null)) {
+            && dataInicio === (state.quadro.dataInicio || null)) {
             return;
         }
         try {
@@ -591,12 +602,12 @@
             const q = await api.put(`/api/quadros/${state.quadro.id}`, {
                 titulo,
                 dataInicio,
-                dataFim,
+                dataFim: null,
                 celulas: null
             });
             state.quadro.titulo = q.titulo;
             state.quadro.dataInicio = q.dataInicio || null;
-            state.quadro.dataFim = q.dataFim || null;
+            state.quadro.dataFim = null;
             els.tituloPrint.textContent = limparTituloPadrao(q.titulo);
             atualizarTextoPeriodoPrint();
             atualizarOpcaoQuadro(q);
@@ -613,8 +624,8 @@
     }
 
     function somarDiasIso(iso, dias) {
-        if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
-        const [y, m, d] = iso.split('-').map(Number);
+        if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return null;
+        const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
         const dt = new Date(Date.UTC(y, m - 1, d + dias));
         return dt.toISOString().slice(0, 10);
     }
@@ -641,23 +652,23 @@
             if (els.btnDuplicar) els.btnDuplicar.disabled = true;
             setStatus('Duplicando…', 'saving');
             const baseTitulo = limparTituloPadrao(els.titulo.value.trim() || state.quadro.titulo);
-            const diAtual = els.dataInicio && els.dataInicio.value ? els.dataInicio.value : state.quadro.dataInicio;
-            const dfAtual = els.dataFim && els.dataFim.value ? els.dataFim.value : state.quadro.dataFim;
-            const novaDataInicio = somarDiasIso(diAtual, 7);
-            const novaDataFim = somarDiasIso(dfAtual, 7);
+            const diAtual = (els.dataInicio && els.dataInicio.value)
+                || state.quadro.dataInicio
+                || state.quadro.dataCriacao;
+            const novaDataInicio = somarDiasIso(diAtual, 1);
 
             const criado = await api.post(`/api/quadros?criancaId=${encodeURIComponent(criancaId)}&titulo=${encodeURIComponent(baseTitulo)}`);
             await api.put(`/api/quadros/${criado.id}`, {
                 titulo: baseTitulo,
                 dataInicio: novaDataInicio,
-                dataFim: novaDataFim,
+                dataFim: null,
                 celulas: Array.from(state.celulas.values()).map(payloadCelula)
             });
             await carregarCrianca(criancaId, criado.id);
             toast(
-                novaDataInicio || novaDataFim
-                    ? 'Quadro duplicado com datas avançadas em +7 dias (próxima semana)!'
-                    : 'Quadro duplicado com sucesso! Defina o novo período.',
+                novaDataInicio
+                    ? `Quadro duplicado para ${formatarDataComDiaSemana(novaDataInicio)}!`
+                    : 'Quadro duplicado com sucesso!',
                 'sucesso'
             );
         } catch (e) {
@@ -1150,8 +1161,10 @@
     });
     els.titulo.addEventListener('change', salvarCabecalhoQuadro);
     els.titulo.addEventListener('keydown', ev => { if (ev.key === 'Enter') els.titulo.blur(); });
-    if (els.dataInicio) els.dataInicio.addEventListener('change', salvarCabecalhoQuadro);
-    if (els.dataFim) els.dataFim.addEventListener('change', salvarCabecalhoQuadro);
+    if (els.dataInicio) {
+        els.dataInicio.addEventListener('input', atualizarTextoPeriodoPrint);
+        els.dataInicio.addEventListener('change', salvarCabecalhoQuadro);
+    }
 
     window.addEventListener('beforeunload', ev => {
         if (state.pendentes > 0 || modal.pendente) {

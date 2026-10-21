@@ -222,6 +222,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
     font-size: 13px;
     font-weight: 600;
 }
+.dia-semana-label {
+    font-weight: 700;
+    color: var(--primaria);
+    background: #EDE7FA;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+.dia-semana-label:empty {
+    display: none;
+}
 
 .print-only-inline { display: none; }
 
@@ -942,14 +954,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
     }
     .periodo-box {
         width: 100%;
-        display: grid;
-        grid-template-columns: auto 1fr;
+        display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 6px 8px;
+        gap: 8px;
         padding: 8px 10px;
     }
     .periodo-box .input-date {
-        width: 100%;
+        flex: 1;
+        min-width: 140px;
     }
     #btnAdicionarPrograma {
         width: 100%;

@@ -488,8 +488,8 @@ async function criarQuadroEmBranco(db, criancaId, titulo) {
     const tituloFinal = (titulo && titulo.trim()) ? titulo.trim() : 'Planejamento dos Atendimentos';
 
     const qRes = await db.query(
-        `INSERT INTO quadros_pei (titulo, crianca_id, data_criacao) VALUES ($1, $2, $3) RETURNING id`,
-        [tituloFinal, criancaId, hoje]
+        `INSERT INTO quadros_pei (titulo, crianca_id, data_criacao, data_inicio) VALUES ($1, $2, $3, $4) RETURNING id`,
+        [tituloFinal, criancaId, hoje, hoje]
     );
     const quadroId = Number(qRes.rows[0].id);
 

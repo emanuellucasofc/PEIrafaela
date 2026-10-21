@@ -157,6 +157,7 @@ public class QuadroService {
         QuadroPei quadro = QuadroPei.builder()
                 .crianca(crianca)
                 .dataCriacao(hoje)
+                .dataInicio(hoje)
                 .titulo(titulo == null || titulo.isBlank()
                         ? "Planejamento dos Atendimentos"
                         : titulo.trim())
