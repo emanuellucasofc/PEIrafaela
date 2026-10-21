@@ -55,8 +55,13 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (!seedHabilitado || itemRepository.count() > 0 || criancaRepository.count() > 0) {
-            log.info("[PEI] Seed ignorado (desabilitado ou banco já populado).");
+        if (!seedHabilitado) {
+            log.info("[PEI] Seed desabilitado.");
+            return;
+        }
+        if (itemRepository.count() > 0 || criancaRepository.count() > 0) {
+            garantirProgramasAdicionais();
+            log.info("[PEI] Seed inicial ignorado (banco já populado); programas adicionais verificados.");
             return;
         }
 
@@ -82,6 +87,7 @@ public class DataInitializer implements CommandLineRunner {
         programa("Atenção Compartilhada", "Compartilhar o foco de atenção com o terapeuta sobre um objeto/evento.");
         programa("Coordenação Motora Fina", "Desenvolver preensão, pinça e manipulação de pequenos objetos.");
         programa("Habilidades Sociais e Brincar", "Troca de turnos, brincar funcional e simbólico.");
+        garantirProgramasAdicionais();
 
         // ------------------------------------------------------------ recursos (vinculados)
         item(RECURSO, "Espelho grande", "Para imitação de expressões e gestos.", "Imitação Motora");
@@ -195,6 +201,36 @@ public class DataInitializer implements CommandLineRunner {
 
     private void programa(String titulo, String descricao) {
         item(PROGRAMA, titulo, descricao, null);
+    }
+
+    private void garantirProgramasAdicionais() {
+        List<String> extras = Arrays.asList(
+                "Atenção conjunta prolongada",
+                "Imitar vocalizações e sons onomatopaicos",
+                "Atendimento a ordens simples de 1 passo",
+                "Contato visual sob solicitação verbal",
+                "Expansão de vocabulário na pasta PECS (ações e sentimentos)",
+                "Indicação de necessidades básicas (água, banheiro, pausa)",
+                "Brincadeira de faz de conta funcional (cuidar de boneco, boneca ou atender telefone)",
+                "Imitação social e de expressões faciais no espelho",
+                "Compartilhamento espontâneo de atenção (apontar para mostrar algo)",
+                "Tolerância à frustração e respeito ao turno (esperar a vez)",
+                "Reconhecimento de emoções básicas em figuras ou rostos",
+                "Enfiamento de contas grossas em cordão",
+                "Rasgar e amassar papéis de texturas variadas",
+                "Uso seguro de tesoura adaptada (cortes retos)",
+                "Traçado de linhas retas e labirintos grossos",
+                "Equilíbrio dinâmico (caminhar sobre linha no chão)",
+                "Pareamento de cores e formas geométricas",
+                "Classificação de objetos por tamanho (grande e pequeno)",
+                "Quebra-cabeças de encaixe simples (2 a 4 peças)",
+                "Brinquedos de causa e efeito (apertar botão para acionar luz/som)"
+        );
+        for (String t : extras) {
+            if (itemRepository.findFirstByCategoriaAndTituloIgnoreCase(PROGRAMA, t).isEmpty()) {
+                programa(t, null);
+            }
+        }
     }
 
     private void item(CategoriaItem categoria, String titulo, String descricao, String programa) {

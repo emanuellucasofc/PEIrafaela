@@ -171,11 +171,52 @@ async function ensureInitialized() {
         if (rows[0].total === 0) {
             await seedDatabase(db);
         }
+        await ensureProgramasAdicionais(db);
     })().catch(err => {
         initPromise = null;
         throw err;
     });
     return initPromise;
+}
+
+const PROGRAMAS_PADRAO_EXTRAS = [
+    'Atenção conjunta prolongada',
+    'Imitar vocalizações e sons onomatopaicos',
+    'Atendimento a ordens simples de 1 passo',
+    'Contato visual sob solicitação verbal',
+    'Expansão de vocabulário na pasta PECS (ações e sentimentos)',
+    'Indicação de necessidades básicas (água, banheiro, pausa)',
+    'Brincadeira de faz de conta funcional (cuidar de boneco, boneca ou atender telefone)',
+    'Imitação social e de expressões faciais no espelho',
+    'Compartilhamento espontâneo de atenção (apontar para mostrar algo)',
+    'Tolerância à frustração e respeito ao turno (esperar a vez)',
+    'Reconhecimento de emoções básicas em figuras ou rostos',
+    'Enfiamento de contas grossas em cordão',
+    'Rasgar e amassar papéis de texturas variadas',
+    'Uso seguro de tesoura adaptada (cortes retos)',
+    'Traçado de linhas retas e labirintos grossos',
+    'Equilíbrio dinâmico (caminhar sobre linha no chão)',
+    'Pareamento de cores e formas geométricas',
+    'Classificação de objetos por tamanho (grande e pequeno)',
+    'Quebra-cabeças de encaixe simples (2 a 4 peças)',
+    'Brinquedos de causa e efeito (apertar botão para acionar luz/som)'
+];
+
+async function ensureProgramasAdicionais(db) {
+    const { rows } = await db.query(
+        `SELECT LOWER(titulo) AS t FROM itens_catalogo WHERE categoria = 'PROGRAMA'`
+    );
+    const existentes = new Set(rows.map(r => r.t));
+    for (const titulo of PROGRAMAS_PADRAO_EXTRAS) {
+        if (!existentes.has(titulo.toLowerCase())) {
+            await db.query(
+                `INSERT INTO itens_catalogo (categoria, titulo, descricao, programa_vinculado_id)
+                 VALUES ('PROGRAMA', $1, NULL, NULL)`,
+                [titulo]
+            );
+            existentes.add(titulo.toLowerCase());
+        }
+    }
 }
 
 async function seedDatabase(db) {
