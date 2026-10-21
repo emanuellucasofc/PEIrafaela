@@ -55,8 +55,8 @@ class PeiApplicationTests {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("PLANEJAMENTO DOS ATENDIMENTOS")))
-                .andExpect(content().string(containsString("#F2542D")))
-                .andExpect(content().string(containsString("#D8DCFF")));
+                .andExpect(content().string(containsString("#FFB5A7")))
+                .andExpect(content().string(containsString("#BDE0FE")));
 
         mockMvc.perform(get("/cadastros"))
                 .andExpect(status().isOk())

@@ -4,23 +4,23 @@
    ===================================================================== */
 
 :root {
-    --rosa-celula: #F9C8CE;
-    --rosa-borda: #F2B6BE;
-    --rosa-marcador: #E2909C;
-    --cinza-rotulo: #F2F2F2;
-    --cinza-borda: #DADADA;
-    --texto: #2B2233;
-    --texto-suave: #6B6375;
-    --texto-celula: #4A2530;
-    --primaria: #5A28B6;
-    --primaria-escura: #451F8C;
-    --secundaria: #001B71;
-    --sucesso: #34B257;
-    --perigo: #D93A2B;
-    --fundo-app: #F6F4FA;
+    --rosa-celula: #FDE8EE;
+    --rosa-borda: #F5C9D6;
+    --rosa-marcador: #E8A8BC;
+    --cinza-rotulo: #F4F1F8;
+    --cinza-borda: #E2DCEB;
+    --texto: #3A3248;
+    --texto-suave: #786F88;
+    --texto-celula: #52333F;
+    --primaria: #9B7EDE;
+    --primaria-escura: #8364CC;
+    --secundaria: #7AA5D2;
+    --sucesso: #6BBF92;
+    --perigo: #E07A82;
+    --fundo-app: #FAF7FC;
     --superficie: #FFFFFF;
     --raio: 10px;
-    --sombra: 0 10px 30px rgba(32, 16, 64, .10), 0 2px 6px rgba(32, 16, 64, .06);
+    --sombra: 0 10px 30px rgba(100, 80, 140, .08), 0 2px 6px rgba(100, 80, 140, .05);
     --fonte: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
@@ -133,13 +133,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn-primary { background: var(--primaria); color: #fff; }
 .btn-primary:hover:not(:disabled) { background: var(--primaria-escura); }
 .btn-secondary { background: var(--secundaria); color: #fff; }
-.btn-secondary:hover:not(:disabled) { background: #00124F; }
-.btn-outline { background: #fff; border-color: #D9D3E5; color: var(--texto); }
-.btn-outline:hover { border-color: var(--primaria); color: var(--primaria); }
-.btn-ghost { background: transparent; color: var(--primaria); }
-.btn-ghost:hover { background: rgba(90, 40, 182, .08); }
-.btn-danger { background: #fff; border-color: #F1C4BF; color: var(--perigo); }
-.btn-danger:hover { background: #FDEDEB; }
+.btn-secondary:hover:not(:disabled) { background: #6491C2; }
+.btn-outline { background: #fff; border-color: #E2DCEB; color: var(--texto); }
+.btn-outline:hover { border-color: var(--primaria); color: var(--primaria-escura); background: #FBF9FE; }
+.btn-ghost { background: #F5F0FC; color: var(--primaria-escura); }
+.btn-ghost:hover { background: #EBE2FA; }
+.btn-danger { background: #FFF7F8; border-color: #F4CFD3; color: #C95B63; }
+.btn-danger:hover { background: #FDECEF; }
 .btn-sm { padding: 6px 10px; font-size: 12.5px; }
 .btn-xs { padding: 4px 8px; font-size: 11.5px; border-radius: 6px; }
 .section-header-inline {
@@ -432,7 +432,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .cell-pink.col-last { border-right: none; }
 .cell-pink.row-last { border-bottom: none; }
-.cell-pink:hover { background: #F7BCC4; }
+.cell-pink:hover { background: #FAD8E3; }
 
 /* Marcadores "+" nas interseções das bordas */
 .cell-pink:not(.col-last):not(.row-last)::after,

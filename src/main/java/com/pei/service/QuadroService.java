@@ -29,19 +29,19 @@ public class QuadroService {
     /** Quantidade padrão de colunas de atendimento (índices 0 a 10). */
     public static final int TOTAL_COLUNAS = 11;
 
-    /** Paleta exata das colunas da linha PROGRAMAS, da esquerda para a direita. */
+    /** Paleta pastel das colunas da linha PROGRAMAS, da esquerda para a direita. */
     public static final List<String> PALETA_COLUNAS = List.of(
-            "#F2542D", // 1 Laranja Avermelhado
-            "#001B71", // 2 Azul Marinho Escuro
-            "#5A28B6", // 3 Roxo/Violeta
-            "#FF59B3", // 4 Rosa Choque
-            "#34B257", // 5 Verde Esmeralda
-            "#D8DCFF", // 6 Lavanda Claro (texto escuro)
-            "#FFA800", // 7 Amarelo Ouro/Laranja
-            "#5A28B6", // 8 Roxo/Violeta
-            "#001B71", // 9 Azul Marinho Escuro
-            "#F2542D", // 10 Laranja Avermelhado
-            "#5A28B6"  // 11 Roxo/Violeta
+            "#FFB5A7", // 1 Coral/Pêssego Pastel
+            "#A8DADC", // 2 Azul Céu Pastel
+            "#CDB4DB", // 3 Lavanda/Lilás Pastel
+            "#FFC8DD", // 4 Rosa Algodão-Doce Pastel
+            "#B7E4C7", // 5 Verde Menta Pastel
+            "#BDE0FE", // 6 Azul Bebê Pastel
+            "#FFE5B4", // 7 Amarelo Baunilha Pastel
+            "#D8BBFF", // 8 Malva/Violeta Pastel
+            "#BCEAD5", // 9 Verde Água Pastel
+            "#FFD6A5", // 10 Damasco/Salmão Pastel
+            "#E2C2FF"  // 11 Lilás Suave Pastel
     );
 
     private final QuadroPeiRepository quadroRepository;

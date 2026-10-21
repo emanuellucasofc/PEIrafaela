@@ -140,10 +140,19 @@
         ).join('');
     }
 
+    const CORES_ANTIGAS = new Set([
+        '#F2542D', '#001B71', '#5A28B6', '#FF59B3', '#34B257', '#D8DCFF', '#FFA800'
+    ]);
+
     function aplicarQuadro(q) {
         state.quadro = q;
         state.celulas.clear();
-        q.celulas.forEach(c => state.celulas.set(chave(c.tipoLinha, c.indiceColuna), c));
+        q.celulas.forEach(c => {
+            if (c.corCabecalho && CORES_ANTIGAS.has(c.corCabecalho.toUpperCase())) {
+                c.corCabecalho = PALETA[c.indiceColuna] || c.corCabecalho;
+            }
+            state.celulas.set(chave(c.tipoLinha, c.indiceColuna), c);
+        });
         desmembrarProgramasAgrupados();
         const tituloLimpo = limparTituloPadrao(q.titulo);
         els.titulo.value = tituloLimpo;
