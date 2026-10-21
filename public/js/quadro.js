@@ -25,6 +25,7 @@
     const els = {
         grid: $('peiGrid'),
         inputCrianca: $('inputCrianca'),
+        inputAt: $('inputAt'),
         btnLimparQuadro: $('btnLimparQuadro'),
         btnImprimir: $('btnImprimir'),
         status: $('saveStatus'),
@@ -34,6 +35,7 @@
         diaSemana: $('diaSemanaQuadro'),
         metaPeriodoPrint: $('metaPeriodoPrint'),
         metaCrianca: $('metaCrianca'),
+        metaAt: $('metaAt'),
         metaData: $('metaData'),
         btnAddPrograma: $('btnAdicionarPrograma'),
         btnPrimeiroPrograma: $('btnPrimeiroPrograma'),
@@ -103,6 +105,10 @@
         if (els.metaCrianca) {
             els.metaCrianca.textContent = nome;
         }
+        const nomeAt = els.inputAt && els.inputAt.value.trim() ? els.inputAt.value.trim() : '—';
+        if (els.metaAt) {
+            els.metaAt.textContent = nomeAt;
+        }
         const titulo = els.titulo && els.titulo.value.trim() ? els.titulo.value.trim() : 'Planejamento dos Atendimentos';
         if (els.tituloPrint) {
             els.tituloPrint.textContent = titulo;
@@ -126,6 +132,7 @@
         }
         state.celulas.clear();
         if (els.inputCrianca) els.inputCrianca.value = '';
+        if (els.inputAt) els.inputAt.value = '';
         if (els.dataInicio) els.dataInicio.value = '';
         if (els.titulo) els.titulo.value = 'Planejamento dos Atendimentos';
         atualizarTextoPeriodoPrint();
@@ -884,6 +891,10 @@
     if (els.inputCrianca) {
         els.inputCrianca.addEventListener('input', atualizarTextoPeriodoPrint);
         els.inputCrianca.addEventListener('change', atualizarTextoPeriodoPrint);
+    }
+    if (els.inputAt) {
+        els.inputAt.addEventListener('input', atualizarTextoPeriodoPrint);
+        els.inputAt.addEventListener('change', atualizarTextoPeriodoPrint);
     }
     if (els.btnLimparQuadro) {
         els.btnLimparQuadro.addEventListener('click', () => limparQuadroTodo(false));
