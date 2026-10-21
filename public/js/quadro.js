@@ -100,6 +100,59 @@
         return dia ? `${dataFmt} - ${dia}` : dataFmt;
     }
 
+    const STORAGE_KEY = 'pei_rascunho_local_v1';
+
+    function salvarRascunhoLocal() {
+        try {
+            const rascunho = {
+                crianca: els.inputCrianca ? els.inputCrianca.value : '',
+                at: els.inputAt ? els.inputAt.value : '',
+                titulo: els.titulo ? els.titulo.value : 'Planejamento dos Atendimentos',
+                dataInicio: els.dataInicio ? els.dataInicio.value : '',
+                celulas: Array.from(state.celulas.values()).filter(c =>
+                    (c.itensSelecionados && c.itensSelecionados.length > 0) ||
+                    (c.textoLivre && c.textoLivre.trim()) ||
+                    (c.tipoLinha === 'PROGRAMA' && c.corCabecalho)
+                )
+            };
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(rascunho));
+        } catch (_) {
+            // ignora caso localStorage esteja indisponível
+        }
+    }
+
+    function restaurarRascunhoLocal() {
+        try {
+            const raw = window.localStorage.getItem(STORAGE_KEY);
+            if (!raw) return false;
+            const r = JSON.parse(raw);
+            if (!r || typeof r !== 'object') return false;
+            state.celulas.clear();
+            if (Array.isArray(r.celulas)) {
+                r.celulas.forEach(c => {
+                    if (c && c.tipoLinha && typeof c.indiceColuna === 'number') {
+                        state.celulas.set(chave(c.tipoLinha, c.indiceColuna), {
+                            indiceColuna: c.indiceColuna,
+                            tipoLinha: c.tipoLinha,
+                            corCabecalho: c.corCabecalho || PALETA[c.indiceColuna],
+                            itensSelecionados: Array.isArray(c.itensSelecionados) ? c.itensSelecionados : [],
+                            textoLivre: c.textoLivre || null
+                        });
+                    }
+                });
+            }
+            if (els.inputCrianca) els.inputCrianca.value = r.crianca || '';
+            if (els.inputAt) els.inputAt.value = r.at || '';
+            if (els.dataInicio) els.dataInicio.value = r.dataInicio || '';
+            if (els.titulo) els.titulo.value = r.titulo || 'Planejamento dos Atendimentos';
+            atualizarTextoPeriodoPrint();
+            renderTodas();
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
     function atualizarTextoPeriodoPrint() {
         const nome = els.inputCrianca && els.inputCrianca.value.trim() ? els.inputCrianca.value.trim() : '—';
         if (els.metaCrianca) {
@@ -123,11 +176,14 @@
                 ? `Data: <strong>${esc(formatarDataComDiaSemana(iso))}</strong>`
                 : 'Data: <strong>—</strong>';
         }
+        salvarRascunhoLocal();
     }
 
     function limparQuadroTodo(silencioso) {
-        const tinhaProgramas = Array.from({ length: CFG.totalColunas || 11 }, (_, i) => i).some(colunaTemPrograma);
-        if (!silencioso && tinhaProgramas && !window.confirm('Deseja limpar todo o quadro atual?')) {
+        const tinhaConteudo = Array.from({ length: CFG.totalColunas || 11 }, (_, i) => i).some(colunaTemPrograma)
+            || Boolean(els.inputCrianca && els.inputCrianca.value.trim())
+            || Boolean(els.inputAt && els.inputAt.value.trim());
+        if (!silencioso && tinhaConteudo && !window.confirm('Deseja limpar todo o quadro atual?')) {
             return;
         }
         state.celulas.clear();
@@ -135,6 +191,7 @@
         if (els.inputAt) els.inputAt.value = '';
         if (els.dataInicio) els.dataInicio.value = '';
         if (els.titulo) els.titulo.value = 'Planejamento dos Atendimentos';
+        try { window.localStorage.removeItem(STORAGE_KEY); } catch (_) {}
         atualizarTextoPeriodoPrint();
         renderTodas();
         if (!silencioso) {
@@ -435,9 +492,10 @@
         el.classList.add('flash');
     }
 
-    // =================================================================== atualização visual da célula (em memória)
+    // =================================================================== atualização visual da célula (salva rascunho local no navegador)
 
     function salvarCelula(linha, col) {
+        salvarRascunhoLocal();
         flash(linha, col);
         return Promise.resolve();
     }
@@ -921,7 +979,9 @@
         const mainEl = document.getElementById('sheetMain');
         if (emptyEl) emptyEl.hidden = true;
         if (mainEl) mainEl.hidden = false;
-        limparQuadroTodo(true);
+        if (!restaurarRascunhoLocal()) {
+            limparQuadroTodo(true);
+        }
     }
 
     inicializar();
