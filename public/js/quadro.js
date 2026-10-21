@@ -946,6 +946,26 @@
     els.qaForm.addEventListener('submit', cadastroRapido);
     els.btnLimpar.addEventListener('click', limparCelula);
 
+    document.addEventListener('pei:limpar-ofensas', () => {
+        if (!window.PEI.removerOfensasTexto) return;
+        let mudou = false;
+        state.celulas.forEach(c => {
+            if (c.textoLivre) {
+                const limpo = window.PEI.removerOfensasTexto(c.textoLivre);
+                if (limpo !== c.textoLivre) {
+                    c.textoLivre = limpo || null;
+                    renderCelula(c.tipoLinha, c.indiceColuna);
+                    mudou = true;
+                }
+            }
+        });
+        if (mudou) {
+            salvarRascunhoLocal();
+            atualizarColunasVisiveis();
+            window.PEI.toast('Palavra(s) imprópria(s) retirada(s) do quadro.', 'sucesso');
+        }
+    });
+
     if (els.inputCrianca) {
         els.inputCrianca.addEventListener('input', atualizarTextoPeriodoPrint);
         els.inputCrianca.addEventListener('change', atualizarTextoPeriodoPrint);
@@ -961,6 +981,9 @@
     if (els.btnAddPrograma) els.btnAddPrograma.addEventListener('click', adicionarPrograma);
     if (els.btnPrimeiroPrograma) els.btnPrimeiroPrograma.addEventListener('click', adicionarPrograma);
     els.btnImprimir.addEventListener('click', () => {
+        if (window.PEI.validarSemOfensasAntesDeAcao && !window.PEI.validarSemOfensasAntesDeAcao()) {
+            return;
+        }
         atualizarTextoPeriodoPrint();
         window.print();
     });
