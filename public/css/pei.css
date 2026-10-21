@@ -115,7 +115,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
     outline: none;
     transition: border-color .15s, box-shadow .15s;
 }
-.select { min-width: 190px; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--texto); }
+.select, .input-crianca-toolbar { min-width: 220px; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--texto); }
 .select:focus, .input:focus, .textarea:focus {
     border-color: var(--primaria);
     box-shadow: 0 0 0 3px rgba(90, 40, 182, .15);
@@ -920,7 +920,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
         align-items: stretch;
         gap: 4px;
     }
-    .toolbar-controls .select {
+    .toolbar-controls .select, .toolbar-controls .input-crianca-toolbar {
         width: 100%;
         min-width: 0;
         min-height: 42px;

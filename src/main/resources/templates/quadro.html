@@ -27,29 +27,14 @@
 
     <div class="toolbar-controls">
         <label class="field-inline">Criança
-            <select id="selCrianca" class="select" aria-label="Selecionar criança">
-                <option th:each="c : ${criancas}" th:value="${c.id}" th:text="${c.nome}"
-                        th:selected="${criancaSelecionada != null && criancaSelecionada == c.id}"></option>
-            </select>
+            <input id="inputCrianca" class="input input-crianca-toolbar" type="text" maxlength="150"
+                   placeholder="Digite o nome da criança..." autocomplete="off" aria-label="Nome da criança">
         </label>
-        <label class="field-inline">Quadro
-            <select id="selQuadro" class="select" aria-label="Selecionar quadro"></select>
-        </label>
-        <button id="btnNovoQuadro" type="button" class="btn btn-ghost" title="Criar um novo quadro em branco para a criança">+ Novo quadro</button>
-        <button id="btnDuplicarQuadro" type="button" class="btn btn-outline btn-sm" title="Copiar todo o quadro atual para outro dia da semana">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Duplicar quadro
-        </button>
-        <button id="btnExcluirQuadro" type="button" class="btn btn-danger btn-sm" title="Excluir o quadro selecionado">
+        <button id="btnLimparQuadro" type="button" class="btn btn-danger btn-sm" title="Limpar todo o quadro atual">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-            Excluir quadro
+            Limpar quadro
         </button>
-        <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
-        <button id="btnSalvar" type="button" class="btn btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            Salvar Planejamento
-        </button>
-        <button id="btnImprimir" type="button" class="btn btn-secondary">
+        <button id="btnImprimir" type="button" class="btn btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             Gerar PDF / Imprimir (Paisagem)
         </button>
@@ -60,15 +45,8 @@
     </div>
 </header>
 
-<!-- ============================ Estado vazio ============================ -->
-<div class="empty-state" th:if="${#lists.isEmpty(criancas)}">
-    <h2>Nenhuma criança cadastrada</h2>
-    <p class="muted">Cadastre uma criança para começar a montar o planejamento dos atendimentos.</p>
-    <a th:href="@{/cadastros}" class="btn btn-primary">Ir para Cadastros</a>
-</div>
-
 <!-- ============================ Quadro PEI ============================ -->
-<main class="sheet-wrapper" th:unless="${#lists.isEmpty(criancas)}">
+<main class="sheet-wrapper" id="sheetMain">
     <section class="sheet" id="sheet" aria-label="Quadro de planejamento dos atendimentos">
         <div class="sheet-header">
             <div>

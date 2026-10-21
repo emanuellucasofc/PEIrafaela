@@ -40,9 +40,9 @@
     };
 
     const state = {
-        aba: 'CRIANCA',
+        aba: 'PROGRAMA',
         aceitaVinculo: false,
-        nomePlural: 'Itens',
+        nomePlural: 'Programas',
         criancas: [],
         todosItens: [],
         programas: []

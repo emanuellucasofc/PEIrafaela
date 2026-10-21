@@ -26,7 +26,7 @@
         </div>
         <div>
             <h1>GERENCIAR BANCO DE DADOS (CADASTROS)</h1>
-            <small>Crianças, Programas, Recursos, Atividades, Preferências e Observações</small>
+            <small>Programas, Recursos, Atividades, Preferências e Observações</small>
         </div>
     </a>
 
@@ -42,10 +42,10 @@
 
     <!-- ============================ Abas ============================ -->
     <nav class="tabs" id="tabs" aria-label="Categorias de cadastro">
-        <button type="button" class="tab ativo" data-tab="CRIANCA">
+        <button type="button" class="tab" data-tab="CRIANCA" hidden>
             Crianças / Pacientes <span class="count" data-count="CRIANCA">0</span>
         </button>
-        <button type="button" class="tab" data-tab="PROGRAMA" data-vinculo="false" data-nome="Programas">
+        <button type="button" class="tab ativo" data-tab="PROGRAMA" data-vinculo="false" data-nome="Programas">
             <span>Programas</span> <span class="count" data-count="PROGRAMA">0</span>
         </button>
         <button type="button" class="tab" data-tab="RECURSO" data-vinculo="true" data-nome="Recursos">
@@ -63,7 +63,7 @@
     </nav>
 
     <!-- ============================ Aba: Crianças ============================ -->
-    <section id="secCrianca" class="crud-layout">
+    <section id="secCrianca" class="crud-layout" hidden>
         <div class="card">
             <h3 id="tituloFormCrianca">Cadastrar Criança / Paciente</h3>
             <form id="formCrianca" class="form-grid" novalidate>
@@ -112,7 +112,7 @@
     </section>
 
     <!-- ============================ Aba: Catálogo ============================ -->
-    <section id="secCatalogo" class="crud-layout" hidden>
+    <section id="secCatalogo" class="crud-layout">
         <div class="card">
             <h3 id="tituloFormItem">Cadastrar Item</h3>
             <form id="formItem" class="form-grid" novalidate>

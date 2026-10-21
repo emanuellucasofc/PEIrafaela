@@ -24,12 +24,8 @@
     const $ = id => document.getElementById(id);
     const els = {
         grid: $('peiGrid'),
-        selCrianca: $('selCrianca'),
-        selQuadro: $('selQuadro'),
-        btnNovo: $('btnNovoQuadro'),
-        btnDuplicar: $('btnDuplicarQuadro'),
-        btnExcluir: $('btnExcluirQuadro'),
-        btnSalvar: $('btnSalvar'),
+        inputCrianca: $('inputCrianca'),
+        btnLimparQuadro: $('btnLimparQuadro'),
         btnImprimir: $('btnImprimir'),
         status: $('saveStatus'),
         titulo: $('tituloQuadro'),
@@ -65,10 +61,10 @@
         btnLimpar: $('btnLimparCelula')
     };
 
-    if (!els.grid) return; // estado vazio (sem crianças)
+    if (!els.grid) return;
 
     const state = {
-        quadro: null,
+        quadro: { id: 0, titulo: 'Planejamento dos Atendimentos' },
         crianca: null,
         celulas: new Map(),
         pendentes: 0,
@@ -76,26 +72,7 @@
     };
     const chave = (linha, col) => `${linha}:${col}`;
 
-    // =================================================================== carregamento
-
-    async function carregarCrianca(criancaId, quadroId) {
-        try {
-            setStatus('Carregando…', 'saving');
-            const [crianca, quadro] = await Promise.all([
-                api.get(`/api/criancas/${criancaId}`),
-                quadroId ? api.get(`/api/quadros/${quadroId}`) : api.get(`/api/criancas/${criancaId}/quadro`)
-            ]);
-            state.crianca = crianca;
-            const quadros = await api.get(`/api/criancas/${criancaId}/quadros`);
-            renderSeletorQuadros(quadros, quadro.id);
-            aplicarQuadro(quadro);
-            history.replaceState(null, '', `?criancaId=${criancaId}`);
-            setStatus('', '');
-        } catch (e) {
-            setStatus('Erro ao carregar', 'error');
-            toast(e.message, 'erro');
-        }
-    }
+    // =================================================================== cabeçalho e estado livre (em memória)
 
     const DIAS_SEMANA = [
         'domingo',
@@ -121,73 +98,40 @@
         return dia ? `${dataFmt} - ${dia}` : dataFmt;
     }
 
-    function limparTituloPadrao(titulo) {
-        if (!titulo) return 'Planejamento dos Atendimentos';
-        return titulo
-            .replace(/^Planejamento dos Atendimentos\s*-\s*(?:\d{2}\/\d{2}\/\d{4})?\s*$/i, 'Planejamento dos Atendimentos')
-            .trim();
+    function atualizarTextoPeriodoPrint() {
+        const nome = els.inputCrianca && els.inputCrianca.value.trim() ? els.inputCrianca.value.trim() : '—';
+        if (els.metaCrianca) {
+            els.metaCrianca.textContent = nome;
+        }
+        const titulo = els.titulo && els.titulo.value.trim() ? els.titulo.value.trim() : 'Planejamento dos Atendimentos';
+        if (els.tituloPrint) {
+            els.tituloPrint.textContent = titulo;
+        }
+        const iso = (els.dataInicio && els.dataInicio.value) || '';
+        const dia = diaDaSemana(iso);
+        if (els.diaSemana) {
+            els.diaSemana.textContent = dia ? `- ${dia}` : '';
+        }
+        if (els.metaData) {
+            els.metaData.innerHTML = iso
+                ? `Data: <strong>${esc(formatarDataComDiaSemana(iso))}</strong>`
+                : 'Data: <strong>—</strong>';
+        }
     }
 
-    function rotuloOpcaoQuadro(q) {
-        const base = limparTituloPadrao(q.titulo);
-        const dataRef = q.dataInicio || q.dataCriacao;
-        return `${base} (${formatarDataComDiaSemana(dataRef)})`;
-    }
-
-    function renderSeletorQuadros(quadros, selecionadoId) {
-        els.selQuadro.innerHTML = quadros.map(q =>
-            `<option value="${q.id}" ${q.id === selecionadoId ? 'selected' : ''}>${esc(rotuloOpcaoQuadro(q))}</option>`
-        ).join('');
-    }
-
-    const CORES_ANTIGAS = new Set([
-        '#F2542D', '#001B71', '#5A28B6', '#FF59B3', '#34B257', '#D8DCFF', '#FFA800'
-    ]);
-
-    function aplicarQuadro(q) {
-        state.quadro = q;
+    function limparQuadroTodo(silencioso) {
+        const tinhaProgramas = Array.from({ length: CFG.totalColunas || 11 }, (_, i) => i).some(colunaTemPrograma);
+        if (!silencioso && tinhaProgramas && !window.confirm('Deseja limpar todo o quadro atual?')) {
+            return;
+        }
         state.celulas.clear();
-        q.celulas.forEach(c => {
-            if (c.corCabecalho && CORES_ANTIGAS.has(c.corCabecalho.toUpperCase())) {
-                c.corCabecalho = PALETA[c.indiceColuna] || c.corCabecalho;
-            }
-            state.celulas.set(chave(c.tipoLinha, c.indiceColuna), c);
-        });
-        desmembrarProgramasAgrupados();
-        const tituloLimpo = limparTituloPadrao(q.titulo);
-        els.titulo.value = tituloLimpo;
-        els.tituloPrint.textContent = tituloLimpo;
-        const dataAtendimento = q.dataInicio || q.dataCriacao || '';
-        if (els.dataInicio) els.dataInicio.value = dataAtendimento;
-        els.metaCrianca.textContent = q.criancaNome;
+        if (els.inputCrianca) els.inputCrianca.value = '';
+        if (els.dataInicio) els.dataInicio.value = '';
+        if (els.titulo) els.titulo.value = 'Planejamento dos Atendimentos';
         atualizarTextoPeriodoPrint();
-        atualizarOpcaoQuadro(q);
-        document.title = `PEI · ${q.criancaNome}`;
         renderTodas();
-    }
-
-    /**
-     * Garante que cada programa fique em sua própria coluna individual.
-     * Caso alguma coluna possua mais de 1 programa selecionado, distribui os
-     * programas excedentes em colunas individuais livres e salva no banco.
-     */
-    function desmembrarProgramasAgrupados() {
-        const total = CFG.totalColunas || 11;
-        for (let col = 0; col < total; col++) {
-            const c = getCelula('PROGRAMA', col);
-            if (c.itensSelecionados && c.itensSelecionados.length > 1) {
-                const extras = c.itensSelecionados.slice(1);
-                c.itensSelecionados = [c.itensSelecionados[0]];
-                salvarCelula('PROGRAMA', col);
-                for (const itemExtra of extras) {
-                    const livre = proximaColunaLivre();
-                    if (livre !== -1) {
-                        const celNova = getCelula('PROGRAMA', livre);
-                        celNova.itensSelecionados = [itemExtra];
-                        salvarCelula('PROGRAMA', livre);
-                    }
-                }
-            }
+        if (!silencioso) {
+            toast('Quadro limpo e livre para novo preenchimento.', 'sucesso');
         }
     }
 
@@ -197,21 +141,6 @@
             if (!colunaTemPrograma(col)) return col;
         }
         return -1;
-    }
-
-    function atualizarTextoPeriodoPrint() {
-        const iso = (els.dataInicio && els.dataInicio.value)
-            || (state.quadro && (state.quadro.dataInicio || state.quadro.dataCriacao))
-            || '';
-        const dia = diaDaSemana(iso);
-        if (els.diaSemana) {
-            els.diaSemana.textContent = dia ? `- ${dia}` : '';
-        }
-        if (els.metaData) {
-            els.metaData.innerHTML = iso
-                ? `Data: <strong>${esc(formatarDataComDiaSemana(iso))}</strong>`
-                : '—';
-        }
     }
 
     function getCelula(linha, col) {
@@ -499,214 +428,11 @@
         el.classList.add('flash');
     }
 
-    // =================================================================== status / autosave
-
-    function setStatus(texto, tipo) {
-        els.status.textContent = texto;
-        els.status.className = 'save-status' + (tipo ? ' ' + tipo : '');
-        if (!els.modal.hidden) {
-            els.modalStatus.textContent = texto;
-            els.modalStatus.className = 'save-status' + (tipo ? ' ' + tipo : '');
-        }
-    }
-
-    function horaAgora() {
-        return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    }
-
-    function payloadCelula(c) {
-        return {
-            indiceColuna: c.indiceColuna,
-            tipoLinha: c.tipoLinha,
-            itensIds: (c.itensSelecionados || []).map(i => i.id),
-            textoLivre: c.textoLivre || null,
-            corCabecalho: c.tipoLinha === 'PROGRAMA' ? (c.corCabecalho || null) : null
-        };
-    }
-
-    /** Fila por quadrado: garante que salvamentos do mesmo quadrado não cheguem fora de ordem. */
-    const filas = new Map();
+    // =================================================================== atualização visual da célula (em memória)
 
     function salvarCelula(linha, col) {
-        const k = chave(linha, col);
-        let f = filas.get(k);
-        if (!f) { f = { emAndamento: false, repetir: false, promise: null }; filas.set(k, f); }
-        if (f.emAndamento) { f.repetir = true; return f.promise; }
-
-        f.emAndamento = true;
-        state.pendentes++;
-        setStatus('Salvando…', 'saving');
-        const quadroId = state.quadro.id;
-
-        f.promise = (async () => {
-            try {
-                do {
-                    f.repetir = false;
-                    await api.put(`/api/quadros/${quadroId}/celula`, payloadCelula(getCelula(linha, col)));
-                } while (f.repetir);
-                state.temErro = false;
-                flash(linha, col);
-            } catch (e) {
-                state.temErro = true;
-                toast('Não foi possível salvar o quadrado: ' + e.message, 'erro');
-            } finally {
-                f.emAndamento = false;
-                state.pendentes--;
-                if (state.pendentes === 0) {
-                    state.temErro
-                        ? setStatus('Erro ao salvar', 'error')
-                        : setStatus('Alterações salvas · ' + horaAgora(), 'saved');
-                }
-            }
-        })();
-        return f.promise;
-    }
-
-    async function salvarPlanejamento() {
-        if (!state.quadro) return;
-        els.btnSalvar.disabled = true;
-        setStatus('Salvando…', 'saving');
-        try {
-            const tituloLimpo = limparTituloPadrao(els.titulo.value.trim() || state.quadro.titulo);
-            els.titulo.value = tituloLimpo;
-            const payload = {
-                titulo: tituloLimpo,
-                dataInicio: els.dataInicio && els.dataInicio.value ? els.dataInicio.value : null,
-                dataFim: null,
-                celulas: Array.from(state.celulas.values()).map(payloadCelula)
-            };
-            const q = await api.put(`/api/quadros/${state.quadro.id}`, payload);
-            aplicarQuadro(q);
-            atualizarOpcaoQuadro(q);
-            state.temErro = false;
-            setStatus('Planejamento salvo · ' + horaAgora(), 'saved');
-            toast('Planejamento salvo com sucesso!', 'sucesso');
-        } catch (e) {
-            setStatus('Erro ao salvar', 'error');
-            toast(e.message, 'erro');
-        } finally {
-            els.btnSalvar.disabled = false;
-        }
-    }
-
-    async function salvarCabecalhoQuadro() {
-        if (!state.quadro) return;
-        const titulo = limparTituloPadrao(els.titulo.value.trim() || state.quadro.titulo);
-        els.titulo.value = titulo;
-        const dataInicio = els.dataInicio && els.dataInicio.value ? els.dataInicio.value : null;
-        atualizarTextoPeriodoPrint();
-        atualizarOpcaoQuadro({
-            ...state.quadro,
-            titulo,
-            dataInicio,
-            dataFim: null
-        });
-
-        if (titulo === state.quadro.titulo
-            && dataInicio === (state.quadro.dataInicio || null)) {
-            return;
-        }
-        try {
-            setStatus('Salvando…', 'saving');
-            const q = await api.put(`/api/quadros/${state.quadro.id}`, {
-                titulo,
-                dataInicio,
-                dataFim: null,
-                celulas: null
-            });
-            state.quadro.titulo = q.titulo;
-            state.quadro.dataInicio = q.dataInicio || null;
-            state.quadro.dataFim = null;
-            els.tituloPrint.textContent = limparTituloPadrao(q.titulo);
-            atualizarTextoPeriodoPrint();
-            atualizarOpcaoQuadro(q);
-            setStatus('Alterações salvas · ' + horaAgora(), 'saved');
-        } catch (e) {
-            setStatus('Erro ao salvar', 'error');
-            toast(e.message, 'erro');
-        }
-    }
-
-    function atualizarOpcaoQuadro(q) {
-        const opt = els.selQuadro.querySelector(`option[value="${q.id}"]`);
-        if (opt) opt.textContent = rotuloOpcaoQuadro(q);
-    }
-
-    function somarDiasIso(iso, dias) {
-        if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return null;
-        const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-        const dt = new Date(Date.UTC(y, m - 1, d + dias));
-        return dt.toISOString().slice(0, 10);
-    }
-
-    async function novoQuadro() {
-        const criancaId = els.selCrianca.value;
-        if (!criancaId) return;
-        try {
-            const q = await api.post(`/api/quadros?criancaId=${encodeURIComponent(criancaId)}`);
-            await carregarCrianca(criancaId, q.id);
-            toast('Novo quadro criado.', 'sucesso');
-            els.titulo.focus();
-            els.titulo.select();
-        } catch (e) {
-            toast(e.message, 'erro');
-        }
-    }
-
-    async function duplicarQuadroAtual() {
-        if (!state.quadro) return;
-        const criancaId = els.selCrianca.value;
-        if (!criancaId) return;
-        try {
-            if (els.btnDuplicar) els.btnDuplicar.disabled = true;
-            setStatus('Duplicando…', 'saving');
-            const baseTitulo = limparTituloPadrao(els.titulo.value.trim() || state.quadro.titulo);
-            const diAtual = (els.dataInicio && els.dataInicio.value)
-                || state.quadro.dataInicio
-                || state.quadro.dataCriacao;
-            const novaDataInicio = somarDiasIso(diAtual, 1);
-
-            const criado = await api.post(`/api/quadros?criancaId=${encodeURIComponent(criancaId)}&titulo=${encodeURIComponent(baseTitulo)}`);
-            await api.put(`/api/quadros/${criado.id}`, {
-                titulo: baseTitulo,
-                dataInicio: novaDataInicio,
-                dataFim: null,
-                celulas: Array.from(state.celulas.values()).map(payloadCelula)
-            });
-            await carregarCrianca(criancaId, criado.id);
-            toast(
-                novaDataInicio
-                    ? `Quadro duplicado para ${formatarDataComDiaSemana(novaDataInicio)}!`
-                    : 'Quadro duplicado com sucesso!',
-                'sucesso'
-            );
-        } catch (e) {
-            setStatus('Erro ao duplicar', 'error');
-            toast(e.message, 'erro');
-        } finally {
-            if (els.btnDuplicar) els.btnDuplicar.disabled = false;
-        }
-    }
-
-    async function excluirQuadroAtual() {
-        if (!state.quadro) return;
-        const criancaId = els.selCrianca.value;
-        const titulo = state.quadro.titulo || 'este quadro';
-        if (!window.confirm(`Deseja realmente excluir o quadro "${titulo}"?`)) {
-            return;
-        }
-        try {
-            if (els.btnExcluir) els.btnExcluir.disabled = true;
-            setStatus('Excluindo…', 'saving');
-            await api.del(`/api/quadros/${state.quadro.id}`);
-            await carregarCrianca(criancaId);
-            toast(`Quadro "${titulo}" excluído com sucesso.`, 'sucesso');
-        } catch (e) {
-            setStatus('Erro ao excluir', 'error');
-            toast(e.message, 'erro');
-        } finally {
-            if (els.btnExcluir) els.btnExcluir.disabled = false;
-        }
+        flash(linha, col);
+        return Promise.resolve();
     }
 
     // =================================================================== modal de seleção
@@ -1155,60 +881,36 @@
     els.qaForm.addEventListener('submit', cadastroRapido);
     els.btnLimpar.addEventListener('click', limparCelula);
 
-    els.selCrianca.addEventListener('change', () => carregarCrianca(els.selCrianca.value));
-    els.selQuadro.addEventListener('change', () => carregarCrianca(els.selCrianca.value, els.selQuadro.value));
-    els.btnNovo.addEventListener('click', novoQuadro);
-    if (els.btnDuplicar) els.btnDuplicar.addEventListener('click', duplicarQuadroAtual);
-    if (els.btnExcluir) els.btnExcluir.addEventListener('click', excluirQuadroAtual);
+    if (els.inputCrianca) {
+        els.inputCrianca.addEventListener('input', atualizarTextoPeriodoPrint);
+        els.inputCrianca.addEventListener('change', atualizarTextoPeriodoPrint);
+    }
+    if (els.btnLimparQuadro) {
+        els.btnLimparQuadro.addEventListener('click', () => limparQuadroTodo(false));
+    }
     if (els.btnAutoPreencherModal) els.btnAutoPreencherModal.addEventListener('click', autoPreencherNoModal);
     if (els.btnAddPrograma) els.btnAddPrograma.addEventListener('click', adicionarPrograma);
     if (els.btnPrimeiroPrograma) els.btnPrimeiroPrograma.addEventListener('click', adicionarPrograma);
-    els.btnSalvar.addEventListener('click', salvarPlanejamento);
     els.btnImprimir.addEventListener('click', () => {
-        els.tituloPrint.textContent = els.titulo.value;
+        atualizarTextoPeriodoPrint();
         window.print();
     });
-    els.titulo.addEventListener('change', salvarCabecalhoQuadro);
+    els.titulo.addEventListener('input', atualizarTextoPeriodoPrint);
+    els.titulo.addEventListener('change', atualizarTextoPeriodoPrint);
     els.titulo.addEventListener('keydown', ev => { if (ev.key === 'Enter') els.titulo.blur(); });
     if (els.dataInicio) {
         els.dataInicio.addEventListener('input', atualizarTextoPeriodoPrint);
-        els.dataInicio.addEventListener('change', salvarCabecalhoQuadro);
+        els.dataInicio.addEventListener('change', atualizarTextoPeriodoPrint);
     }
-
-    window.addEventListener('beforeunload', ev => {
-        if (state.pendentes > 0 || modal.pendente) {
-            ev.preventDefault();
-            ev.returnValue = '';
-        }
-    });
 
     // =================================================================== inicialização
 
-    async function inicializar() {
-        const params = new URLSearchParams(window.location.search);
-        const urlCriancaId = params.get('criancaId') || CFG.criancaSelecionada;
-        if (!els.selCrianca.options.length) {
-            try {
-                const criancas = await api.get('/api/criancas');
-                els.selCrianca.innerHTML = criancas.map(c =>
-                    `<option value="${c.id}">${esc(c.nome)}</option>`
-                ).join('');
-                const emptyEl = document.getElementById('emptyState');
-                const mainEl = document.getElementById('sheetMain');
-                if (emptyEl && mainEl) {
-                    emptyEl.hidden = criancas.length > 0;
-                    mainEl.hidden = criancas.length === 0;
-                }
-            } catch (e) {
-                toast(e.message, 'erro');
-                return;
-            }
-        }
-        const inicial = urlCriancaId || els.selCrianca.value;
-        if (inicial) {
-            els.selCrianca.value = String(inicial);
-            await carregarCrianca(els.selCrianca.value || inicial);
-        }
+    function inicializar() {
+        const emptyEl = document.getElementById('emptyState');
+        const mainEl = document.getElementById('sheetMain');
+        if (emptyEl) emptyEl.hidden = true;
+        if (mainEl) mainEl.hidden = false;
+        limparQuadroTodo(true);
     }
 
     inicializar();
