@@ -1129,18 +1129,24 @@ button, input, select, textarea { font: inherit; color: inherit; }
     }
 }
 
-/* ------------------------------------------------------------------ Impressão: A4 paisagem */
+/* ------------------------------------------------------------------ Impressão: A4 paisagem (1 página única) */
 
 .print-only { display: none; }
 
 @page {
     size: A4 landscape;
-    margin: 8mm;
+    margin: 5mm 6mm;
 }
 
 @media print {
     html, body {
         background: #fff !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: 198mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
@@ -1150,41 +1156,85 @@ button, input, select, textarea { font: inherit; color: inherit; }
     }
 
     .no-print, .toolbar, .modal-backdrop, .toasts, .cell-hint, .programa-placeholder, body::before { display: none !important; }
-    .print-only { display: block; }
-    .print-only-inline { display: inline; }
+    .print-only { display: block !important; }
+    .print-only-inline { display: inline !important; }
 
-    .sheet-wrapper, .pei-grid-scroll { padding: 0; overflow: visible !important; }
-    .sheet {
-        box-shadow: none;
-        border-radius: 0;
-        padding: 0;
-        width: 100%;
-        min-width: 0;
+    .sheet-wrapper, .pei-grid-scroll {
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
     }
-    .sheet-header { margin-bottom: 3mm; align-items: baseline; }
-    .sheet-title-main { font-size: 11pt; color: #000; letter-spacing: .08em; }
-    .titulo-input { display: none; }
-    .titulo-print { display: inline; font-size: 9pt; font-weight: 600; color: #333; }
-    .sheet-meta { font-size: 8.5pt; color: #333; }
+    .sheet {
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        background: #fff !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+    }
+    .sheet-header {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: baseline !important;
+        gap: 4mm !important;
+        margin-bottom: 2mm !important;
+    }
+    .sheet-header > div:first-child { width: auto !important; }
+    .sheet-header-right {
+        width: auto !important;
+        flex-direction: row !important;
+        align-items: baseline !important;
+        gap: 3mm !important;
+    }
+    .sheet-title-main { font-size: 10pt !important; color: #000 !important; letter-spacing: .06em !important; margin: 0 !important; }
+    .titulo-input { display: none !important; }
+    .titulo-print { display: inline !important; font-size: 8.5pt !important; font-weight: 600 !important; color: #333 !important; }
+    .sheet-meta { font-size: 8pt !important; color: #333 !important; line-height: 1.2 !important; }
 
     .pei-grid {
-        --label-w: 27mm;
+        --label-w: 25mm;
         --col-min: 0px;
-        width: 100%;
-        min-width: 0;
-        grid-template-rows: minmax(15mm, auto) repeat(4, minmax(38mm, auto));
-        border-radius: 0;
-        page-break-inside: avoid;
-        break-inside: avoid;
+        width: 100% !important;
+        min-width: 0 !important;
+        grid-template-rows: minmax(11mm, auto) repeat(4, minmax(26mm, auto)) !important;
+        border-radius: 0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
     }
-    .row-label { position: static; font-size: 7.5pt; padding: 2mm; }
-    .programa-bloco { min-height: 13mm; padding: 1.5mm 1mm; box-shadow: none !important; filter: none !important; }
-    .cell-programa { padding: 1mm .6mm; }
-    .programa-titulo { font-size: 7.5pt; }
-    .cell-pink { padding: 1.5mm 1.2mm; }
-    .cell-pink:hover { background: var(--rosa-celula); }
-    .cell-content { font-size: 6.8pt; gap: 1mm; }
-    .chip { padding: .6mm 1.2mm; border-radius: 1mm; }
-    .texto-livre { font-size: 6.5pt; }
+    .row-label {
+        position: static !important;
+        font-size: 7pt !important;
+        padding: 1.5mm !important;
+        line-height: 1.15 !important;
+        box-shadow: none !important;
+    }
+    .programa-bloco {
+        min-height: 10mm !important;
+        padding: 1.2mm 1mm !important;
+        box-shadow: none !important;
+        filter: none !important;
+    }
+    .cell-programa { padding: .8mm .5mm !important; }
+    .programa-titulo { font-size: 7pt !important; line-height: 1.15 !important; }
+    .cell-pink { padding: 1.2mm 1mm !important; }
+    .cell-pink:hover { background: var(--rosa-celula) !important; }
+    .cell-content { font-size: 6.4pt !important; gap: .8mm !important; }
+    .chip { padding: .4mm 1mm !important; border-radius: 1mm !important; line-height: 1.15 !important; }
+    .texto-livre { font-size: 6.2pt !important; line-height: 1.15 !important; margin-top: .5mm !important; }
 }
 
