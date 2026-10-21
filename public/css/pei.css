@@ -28,6 +28,7 @@
 
 html, body {
     margin: 0;
+    min-height: 100%;
     font-family: var(--fonte);
     color: var(--texto);
     background: var(--fundo-app);
@@ -36,6 +37,15 @@ html, body {
     text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     overflow-x: hidden;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--fundo-app) url('/img/fundo-pastel.png') center center / cover no-repeat;
+    pointer-events: none;
 }
 
 [hidden] { display: none !important; }
@@ -54,8 +64,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
     justify-content: space-between;
     gap: 14px 24px;
     padding: 14px 24px;
-    background: var(--superficie);
-    border-bottom: 1px solid #E7E2F0;
+    background: rgba(255, 255, 255, .88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(231, 226, 240, .85);
     box-shadow: 0 2px 12px rgba(32, 16, 64, .05);
 }
 
@@ -180,7 +192,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .sheet {
-    background: var(--superficie);
+    background: rgba(255, 255, 255, .92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border-radius: 14px;
     box-shadow: var(--sombra);
     padding: 18px 18px 22px;
@@ -806,7 +820,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (max-width: 900px) { .crud-layout { grid-template-columns: 1fr; } }
 
 .card {
-    background: #fff;
+    background: rgba(255, 255, 255, .92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border-radius: 14px;
     box-shadow: var(--sombra);
     padding: 18px;
@@ -1125,7 +1141,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
         print-color-adjust: exact !important;
     }
 
-    .no-print, .toolbar, .modal-backdrop, .toasts, .cell-hint, .programa-placeholder { display: none !important; }
+    .no-print, .toolbar, .modal-backdrop, .toasts, .cell-hint, .programa-placeholder, body::before { display: none !important; }
     .print-only { display: block; }
     .print-only-inline { display: inline; }
 
