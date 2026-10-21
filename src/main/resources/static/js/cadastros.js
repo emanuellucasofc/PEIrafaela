@@ -35,6 +35,7 @@
         btnCancelarItem: $('btnCancelarItem'),
         buscaCatalogo: $('buscaCatalogo'),
         filtroPrograma: $('filtroPrograma'),
+        btnRestaurarOcultos: $('btnRestaurarOcultos'),
         thPrograma: $('thPrograma'),
         tbodyItens: $('tbodyItens')
     };
@@ -73,6 +74,13 @@
         state.todosItens.forEach(i => { porCat[i.categoria] = (porCat[i.categoria] || 0) + 1; });
         ['PROGRAMA', 'RECURSO', 'ATIVIDADE', 'PREFERENCIA', 'OBSERVACAO']
             .forEach(c => setCount(c, porCat[c] || 0));
+        if (els.btnRestaurarOcultos && window.PEI.obterItensOcultosSessao) {
+            const qtdOcultos = window.PEI.obterItensOcultosSessao().size;
+            els.btnRestaurarOcultos.hidden = qtdOcultos === 0;
+            if (qtdOcultos > 0) {
+                els.btnRestaurarOcultos.textContent = `Restaurar opções excluídas (${qtdOcultos})`;
+            }
+        }
     }
 
     function setCount(chave, valor) {
@@ -282,11 +290,11 @@
 
     async function excluirItem(id) {
         const i = state.todosItens.find(x => x.id === id);
-        if (!i || !confirm(`Excluir “${i.titulo}” do banco de dados?`)) return;
+        if (!i || !confirm(`Remover “${i.titulo}” apenas para você neste planejamento?\n\n(Ele não será apagado do banco de dados principal e voltará a aparecer ao criar um novo planejamento ou sair do site.)`)) return;
         try {
             await api.del(`/api/catalogo/${id}`);
             if (els.itemId.value === String(id)) limparFormItem();
-            toast('Item excluído.', 'sucesso');
+            toast('Opção removida apenas para o seu planejamento atual.', 'sucesso');
             await recarregarTudo();
         } catch (e) {
             toast(e.message, 'erro');
@@ -314,6 +322,13 @@
     els.btnCancelarItem.addEventListener('click', limparFormItem);
     els.buscaCatalogo.addEventListener('input', debounce(renderItens, 150));
     els.filtroPrograma.addEventListener('change', renderItens);
+    if (els.btnRestaurarOcultos) {
+        els.btnRestaurarOcultos.addEventListener('click', async () => {
+            if (window.PEI.restaurarItensSessao) window.PEI.restaurarItensSessao();
+            toast('Todas as opções do banco voltaram ao normal!', 'sucesso');
+            await recarregarTudo();
+        });
+    }
     els.tbodyItens.addEventListener('click', ev => {
         const ed = ev.target.closest('[data-editar-item]');
         if (ed) editarItem(Number(ed.dataset.editarItem));

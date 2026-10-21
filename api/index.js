@@ -756,11 +756,7 @@ module.exports = async function handler(req, res) {
                 return sendJson(res, 200, mapItem({ ...upd.rows[0], programa_vinculado_titulo: progTitulo }, false));
             }
             if (method === 'DELETE') {
-                const cur = await db.query(`SELECT id FROM itens_catalogo WHERE id = $1`, [id]);
-                if (!cur.rows.length) throw httpError(404, `Item do catálogo não encontrado: ${id}`);
-                await db.query(`DELETE FROM celula_itens WHERE item_id = $1`, [id]);
-                await db.query(`UPDATE itens_catalogo SET programa_vinculado_id = NULL WHERE programa_vinculado_id = $1`, [id]);
-                await db.query(`DELETE FROM itens_catalogo WHERE id = $1`, [id]);
+                // Exclusão não apaga do banco principal compartilhado; apenas confirma (exclusão é por sessão no navegador)
                 res.statusCode = 204;
                 return res.end();
             }

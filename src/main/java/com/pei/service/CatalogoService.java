@@ -69,17 +69,13 @@ public class CatalogoService {
         return ItemCatalogoDTO.of(item);
     }
 
-    /** Remove o item do catálogo, retirando-o antes de todos os quadrados e vínculos que o referenciam. */
+    /**
+     * Exclusão permanente do banco principal desabilitada:
+     * a exclusão é aplicada apenas na sessão local do usuário no navegador.
+     */
     @Transactional
     public void excluir(Long id) {
-        ItemCatalogo item = obter(id);
-        for (CelulaPei celula : celulaRepository.findByItemSelecionado(id)) {
-            celula.getItensSelecionados().removeIf(i -> i.getId().equals(id));
-        }
-        if (item.getCategoria() == CategoriaItem.PROGRAMA) {
-            itemRepository.desvincularDoPrograma(id);
-        }
-        itemRepository.delete(item);
+        obter(id);
     }
 
     @Transactional(readOnly = true)

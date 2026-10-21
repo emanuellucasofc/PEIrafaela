@@ -192,10 +192,12 @@
         if (els.dataInicio) els.dataInicio.value = '';
         if (els.titulo) els.titulo.value = 'Planejamento dos Atendimentos';
         try { window.localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+        if (window.PEI.restaurarItensSessao) window.PEI.restaurarItensSessao();
+        modal.todosProgramas = null;
         atualizarTextoPeriodoPrint();
         renderTodas();
         if (!silencioso) {
-            toast('Quadro limpo e livre para novo preenchimento.', 'sucesso');
+            toast('Novo planejamento iniciado! Todas as opções do banco foram restauradas.', 'sucesso');
         }
     }
 

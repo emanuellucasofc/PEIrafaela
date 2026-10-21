@@ -5,7 +5,41 @@
 (function () {
     'use strict';
 
+    const OCULTOS_SESSAO_KEY = 'pei_itens_ocultos_sessao_v1';
+
+    function obterItensOcultosSessao() {
+        try {
+            const raw = window.sessionStorage.getItem(OCULTOS_SESSAO_KEY);
+            if (!raw) return new Set();
+            const arr = JSON.parse(raw);
+            return new Set(Array.isArray(arr) ? arr.map(Number) : []);
+        } catch (_) {
+            return new Set();
+        }
+    }
+
+    function ocultarItemSessao(id) {
+        try {
+            const conj = obterItensOcultosSessao();
+            conj.add(Number(id));
+            window.sessionStorage.setItem(OCULTOS_SESSAO_KEY, JSON.stringify([...conj]));
+        } catch (_) {}
+    }
+
+    function restaurarItensSessao() {
+        try {
+            window.sessionStorage.removeItem(OCULTOS_SESSAO_KEY);
+        } catch (_) {}
+    }
+
     async function request(method, url, body) {
+        if (method === 'DELETE') {
+            const mCat = /^\/api\/catalogo\/(\d+)$/.exec(url);
+            if (mCat) {
+                ocultarItemSessao(Number(mCat[1]));
+                return null;
+            }
+        }
         if ((method === 'POST' || method === 'PUT') && body !== undefined) {
             const textos = [];
             const extrairStrings = obj => {
@@ -40,6 +74,12 @@
             const err = new Error(msg);
             err.status = resp.status;
             throw err;
+        }
+        if (method === 'GET' && url.startsWith('/api/catalogo') && Array.isArray(data)) {
+            const ocultos = obterItensOcultosSessao();
+            if (ocultos.size > 0) {
+                return data.filter(item => !ocultos.has(Number(item.id)));
+            }
         }
         return data;
     }
@@ -418,7 +458,8 @@
             del: url => request('DELETE', url)
         },
         toast, esc, debounce, corClara, formatarData,
-        verificarOfensas, removerOfensasTexto, validarSemOfensasAntesDeAcao
+        verificarOfensas, removerOfensasTexto, validarSemOfensasAntesDeAcao,
+        obterItensOcultosSessao, ocultarItemSessao, restaurarItensSessao
     };
 })();
 
