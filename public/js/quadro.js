@@ -147,19 +147,28 @@
                 <span class="dia-data" data-data="${d.k}"></span></div>`;
         });
         // Linha: PROGRAMAS
-        html += rotulo('PROGRAMA', 'PROGRAMAS', '(20 no total)');
+        html += rotulo('PROGRAMA', 'PROGRAMAS', '');
         DIAS.forEach(d => {
-            html += `<div class="bloco bloco-prog ${d.css}" data-bloco="PROGRAMA:${d.k}"><div class="lista-2col">${slotsHtml('PROGRAMA', d.k)}</div></div>`;
+            html += `<div class="bloco bloco-prog ${d.css}" data-bloco="PROGRAMA:${d.k}">
+                <div class="lista-1col">${slotsHtml('PROGRAMA', d.k)}</div>
+                <button type="button" class="btn-add-dia no-print" data-add-dia="PROGRAMA:${d.k}">+ Adicionar programa</button>
+            </div>`;
         });
         // Linha: ATIVIDADES
         html += rotulo('ATIVIDADE', 'ATIVIDADES PLANEJADAS', '(de cada programa)');
         DIAS.forEach(d => {
-            html += `<div class="bloco ${d.css}" data-bloco="ATIVIDADE:${d.k}"><div class="lista-2col">${slotsHtml('ATIVIDADE', d.k)}</div></div>`;
+            html += `<div class="bloco ${d.css}" data-bloco="ATIVIDADE:${d.k}">
+                <div class="lista-1col">${slotsHtml('ATIVIDADE', d.k)}</div>
+                <button type="button" class="btn-add-dia no-print" data-add-dia="ATIVIDADE:${d.k}">+ Adicionar atividade</button>
+            </div>`;
         });
         // Linha: RECURSOS
         html += rotulo('RECURSO', 'RECURSOS UTILIZADOS', '(de cada programa)');
         DIAS.forEach(d => {
-            html += `<div class="bloco ${d.css}" data-bloco="RECURSO:${d.k}"><div class="lista-2col">${slotsHtml('RECURSO', d.k)}</div></div>`;
+            html += `<div class="bloco ${d.css}" data-bloco="RECURSO:${d.k}">
+                <div class="lista-1col">${slotsHtml('RECURSO', d.k)}</div>
+                <button type="button" class="btn-add-dia no-print" data-add-dia="RECURSO:${d.k}">+ Adicionar recurso</button>
+            </div>`;
         });
         // Linha: OBSERVAÇÕES
         html += rotulo('OBSERVACAO', 'OBSERVAÇÕES DO DIA', '');
@@ -184,16 +193,23 @@
         return Boolean((linha.itens && linha.itens.length) || (linha.texto && linha.texto.trim()));
     }
 
+    function slotVisivelNoDia(dia, i) {
+        return Boolean(dia.programas[i] || linhaTemConteudo(dia.atividades[i]) || linhaTemConteudo(dia.recursos[i]));
+    }
+
     function renderSlot(tipo, diaK, i) {
         const el = els.grid.querySelector(`.slot-linha[data-abrir="${tipo}"][data-dia="${diaK}"][data-i="${i}"]`);
         if (!el) return;
+        const slotWrap = el.closest('.slot');
         const dia = state.dias[diaK];
+        const visivel = slotVisivelNoDia(dia, i);
+        if (slotWrap) slotWrap.hidden = !visivel;
 
         if (tipo === 'PROGRAMA') {
             const p = dia.programas[i];
             el.innerHTML = p
                 ? `<span class="slot-itens">${esc(p.titulo)}</span><button type="button" class="slot-x no-print" data-remover="PROGRAMA:${diaK}:${i}" title="Remover programa" aria-label="Remover ${esc(p.titulo)}">&times;</button>`
-                : '';
+                : `<span class="slot-vazio-hint no-print">+ Escolher programa</span>`;
             el.title = p ? p.titulo : `Adicionar programa ${i + 1}`;
             el.classList.toggle('preenchido', Boolean(p));
             const cb = els.grid.querySelector(`[data-check="${diaK}:${i}"]`);
@@ -206,7 +222,7 @@
         const tem = linhaTemConteudo(linha);
         el.innerHTML = tem
             ? `<span class="slot-itens">${esc(itens)}</span>${texto ? `<span class="texto-livre">${itens ? ' — ' : ''}${esc(texto)}</span>` : ''}<button type="button" class="slot-x no-print" data-remover="${tipo}:${diaK}:${i}" title="Limpar linha" aria-label="Limpar linha ${i + 1}">&times;</button>`
-            : '';
+            : `<span class="slot-vazio-hint no-print">+ Escolher ${TIPOS[tipo].singular}</span>`;
         el.title = tem ? [itens, texto].filter(Boolean).join(' — ') : `Adicionar ${TIPOS[tipo].singular} da linha ${i + 1}`;
         el.classList.toggle('preenchido', tem);
     }
@@ -355,12 +371,12 @@
         if (dia.programas.some(p => p && p.id === item.id)) return true;
         let idx = (preferencia != null && !dia.programas[preferencia]) ? preferencia : primeiraLinhaLivre(diaK);
         if (idx === -1) {
-            toast('Os 20 programas deste dia já estão preenchidos.', 'erro');
+            toast('Limite máximo de programas deste dia atingido.', 'erro');
             return false;
         }
         dia.programas[idx] = { id: item.id, titulo: item.titulo };
         dia.marcados[idx] = false;
-        renderSlot('PROGRAMA', diaK, idx);
+        renderDia(diaK);
         flash(diaK, idx);
         salvarRascunho();
         autoPreencherLinha(diaK, idx);
@@ -369,20 +385,22 @@
 
     function removerPrograma(diaK, i) {
         const dia = state.dias[diaK];
-        if (!dia.programas[i]) return;
-        dia.programas[i] = null;
-        dia.marcados[i] = false;
-        dia.atividades[i] = novaLinha();
-        dia.recursos[i] = novaLinha();
-        renderSlot('PROGRAMA', diaK, i);
-        renderSlot('ATIVIDADE', diaK, i);
-        renderSlot('RECURSO', diaK, i);
+        if (!slotVisivelNoDia(dia, i)) return;
+        dia.programas.splice(i, 1);
+        dia.programas.push(null);
+        dia.marcados.splice(i, 1);
+        dia.marcados.push(false);
+        dia.atividades.splice(i, 1);
+        dia.atividades.push(novaLinha());
+        dia.recursos.splice(i, 1);
+        dia.recursos.push(novaLinha());
+        renderDia(diaK);
         salvarRascunho();
     }
 
     function limparLinha(tipo, diaK, i) {
         state.dias[diaK][CHAVE_LISTA[tipo]][i] = novaLinha();
-        renderSlot(tipo, diaK, i);
+        renderDia(diaK);
         salvarRascunho();
     }
 
@@ -571,7 +589,7 @@
         } else {
             linha.itens = linha.itens.filter(i => i.id !== id);
         }
-        renderSlot(modal.tipo, modal.dia, modal.slot);
+        renderDia(modal.dia);
         renderSelecionados();
         salvarRascunho();
     }
@@ -595,7 +613,7 @@
                 modal.slot = null;
             } else {
                 linhaModal().itens.push({ id: novo.id, titulo: novo.titulo });
-                renderSlot(modal.tipo, modal.dia, modal.slot);
+                renderDia(modal.dia);
                 salvarRascunho();
             }
             renderSelecionados();
@@ -615,7 +633,9 @@
             const dia = state.dias[modal.dia];
             if (!dia.programas.some(Boolean)) return;
             if (!window.confirm(`Remover todos os programas de ${DIA_POR_K[modal.dia].nome}?`)) return;
-            for (let i = 0; i < N; i++) if (dia.programas[i]) removerPrograma(modal.dia, i);
+            state.dias[modal.dia] = novoDia();
+            renderDia(modal.dia);
+            salvarRascunho();
             renderSelecionados();
             renderLista();
             return;
@@ -643,6 +663,23 @@
             const [tipo, diaK, i] = btnRem.dataset.remover.split(':');
             if (tipo === 'PROGRAMA') removerPrograma(diaK, Number(i));
             else limparLinha(tipo, diaK, Number(i));
+            return;
+        }
+        const btnAdd = ev.target.closest('[data-add-dia]');
+        if (btnAdd) {
+            const [tipo, diaK] = btnAdd.dataset.addDia.split(':');
+            const dia = state.dias[diaK];
+            if (tipo === 'PROGRAMA') {
+                const idx = primeiraLinhaLivre(diaK);
+                if (idx === -1) { toast('Limite máximo de programas deste dia atingido.', 'erro'); return; }
+                abrirModal('PROGRAMA', diaK, idx, btnAdd);
+            } else {
+                const lista = dia[CHAVE_LISTA[tipo]];
+                let idx = lista.findIndex((l, k) => dia.programas[k] && !linhaTemConteudo(l));
+                if (idx === -1) idx = lista.findIndex((l, k) => !slotVisivelNoDia(dia, k));
+                if (idx === -1) idx = 0;
+                abrirModal(tipo, diaK, idx, btnAdd);
+            }
             return;
         }
         const alvo = ev.target.closest('[data-abrir]');
@@ -709,7 +746,7 @@
     els.textoLivre.addEventListener('input', () => {
         if (modal.tipo === 'PROGRAMA' || modal.dia == null) return;
         linhaModal().texto = els.textoLivre.value;
-        renderSlot(modal.tipo, modal.dia, modal.slot);
+        renderDia(modal.dia);
         salvarRascunho();
     });
 
