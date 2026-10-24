@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#5A28B6">
+    <meta name="theme-color" content="#9B7EDE">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="format-detection" content="telephone=no">
     <title>PEI · Planejamento dos Atendimentos</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='7' height='7' rx='2' fill='%23F2542D'/%3E%3Crect x='9' width='7' height='7' rx='2' fill='%235A28B6'/%3E%3Crect y='9' width='7' height='7' rx='2' fill='%2334B257'/%3E%3Crect x='9' y='9' width='7' height='7' rx='2' fill='%23FFA800'/%3E%3C/svg%3E">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='7' height='7' rx='2' fill='%23F7C6D6'/%3E%3Crect x='9' width='7' height='7' rx='2' fill='%23DCD2F6'/%3E%3Crect y='9' width='7' height='7' rx='2' fill='%23C8EEDF'/%3E%3Crect x='9' y='9' width='7' height='7' rx='2' fill='%23CBE2F8'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Dancing+Script:wght@600;700&family=Nunito:wght@500;600;700;800&display=swap">
     <link rel="stylesheet" href="/css/pei.css">
 </head>
 <body>
@@ -17,12 +20,12 @@
 <header class="toolbar no-print">
     <a class="brand" href="/">
         <div class="brand-logo" aria-hidden="true">
-            <span style="background:#FFB5A7"></span>
-            <span style="background:#A8DADC"></span>
-            <span style="background:#CDB4DB"></span>
-            <span style="background:#FFC8DD"></span>
-            <span style="background:#B7E4C7"></span>
-            <span style="background:#BDE0FE"></span>
+            <span style="background:#F7C6D6"></span>
+            <span style="background:#DCD2F6"></span>
+            <span style="background:#C8EEDF"></span>
+            <span style="background:#FBE7A9"></span>
+            <span style="background:#CBE2F8"></span>
+            <span style="background:#F7C6D6"></span>
         </div>
         <div>
             <h1>PLANEJAMENTO DOS ATENDIMENTOS</h1>
@@ -39,7 +42,10 @@
             <input id="inputAt" class="input input-crianca-toolbar" type="text" maxlength="150"
                    placeholder="Digite o nome da AT..." autocomplete="off" aria-label="Nome da AT">
         </label>
-        <button id="btnLimparQuadro" type="button" class="btn btn-danger btn-sm" title="Limpar todo o quadro atual">
+        <label class="field-inline">Semana
+            <input id="inputSemana" class="input input-semana-toolbar" type="date" aria-label="Qualquer dia da semana do planejamento">
+        </label>
+        <button id="btnLimparQuadro" type="button" class="btn btn-danger btn-sm" title="Limpar todo o quadro e começar um novo planejamento">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             Limpar quadro
         </button>
@@ -54,110 +60,38 @@
     </div>
 </header>
 
-<!-- ============================ Quadro PEI ============================ -->
-<main class="sheet-wrapper" id="sheetMain">
-    <section class="sheet" id="sheet" aria-label="Quadro de planejamento dos atendimentos">
-        <div class="sheet-header">
-            <div>
-                <p class="sheet-title-main">PLANEJAMENTO DOS ATENDIMENTOS</p>
-                <input id="tituloQuadro" class="titulo-input" type="text" maxlength="200"
-                       aria-label="Título do quadro" placeholder="Título do planejamento">
-                <span id="tituloPrint" class="print-only titulo-print"></span>
+<!-- ============================ Quadro semanal ============================ -->
+<main class="semana-wrapper" id="sheetMain">
+    <section class="semana-sheet" aria-label="Quadro semanal de planejamento dos atendimentos">
+        <header class="semana-header">
+            <div class="semana-header-esq">
+                <h2 class="semana-titulo"><span class="coracao-titulo" aria-hidden="true">♥</span>Planejamento dos Atendimentos</h2>
+                <p class="semana-sub">ATIVIDADES<span class="dot">•</span>PROGRAMAS<span class="dot">•</span>RECURSOS<span class="dot">•</span>OBSERVAÇÕES</p>
+                <p class="semana-meta" id="semanaMeta"></p>
             </div>
-            <div class="sheet-header-right">
-                <div class="periodo-box no-print" aria-label="Data e dia da semana do atendimento">
-                    <span>Dia</span>
-                    <input id="dataInicioQuadro" class="input input-date" type="date" aria-label="Data do atendimento">
-                    <span id="diaSemanaQuadro" class="dia-semana-label"></span>
-                </div>
-                <button id="btnAdicionarPrograma" type="button" class="btn btn-primary btn-sm no-print">
-                    + Adicionar Programa
-                </button>
-                <div class="sheet-meta">
-                    Criança: <strong id="metaCrianca">—</strong>
-                    &nbsp;·&nbsp; AT: <strong id="metaAt">—</strong>
-                    &nbsp;·&nbsp; <span id="metaData">—</span>
+            <div class="semana-header-dir">
+                <p class="semana-frase">
+                    <span class="frase-raio esq" aria-hidden="true"></span>
+                    Pequenos avanços<br>também são<br>grandes conquistas
+                    <span class="frase-coracao" aria-hidden="true">♡</span>
+                    <span class="frase-raio dir" aria-hidden="true"></span>
+                </p>
+                <div class="arco-iris" aria-hidden="true">
+                    <svg viewBox="0 0 120 70" width="112" height="66">
+                        <g fill="none" stroke-linecap="round" stroke-width="9">
+                            <path d="M10 66 A50 50 0 0 1 110 66" stroke="#CDB8F0"/>
+                            <path d="M20 66 A40 40 0 0 1 100 66" stroke="#BCD7F5"/>
+                            <path d="M30 66 A30 30 0 0 1 90 66" stroke="#BFE8D4"/>
+                            <path d="M40 66 A20 20 0 0 1 80 66" stroke="#FBE3A6"/>
+                        </g>
+                        <path d="M60 64c-6-5-10-8-10-12a5 5 0 0 1 10-2a5 5 0 0 1 10 2c0 4-4 7-10 12z" fill="#F4A9C4"/>
+                    </svg>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <div id="semProgramasBox" class="sem-programas-box no-print" hidden>
-            <p>Nenhum programa adicionado neste quadro ainda.</p>
-            <button type="button" class="btn btn-primary" id="btnPrimeiroPrograma">+ Adicionar Programa</button>
-        </div>
-
-        <div class="pei-grid-scroll">
-        <div class="pei-grid" id="peiGrid" style="--cols:11">
-            <!-- Linha 1: PROGRAMAS -->
-            <div class="row-label">PROGRAMAS:</div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="0" data-linha="PROGRAMA" aria-label="Programa da coluna 1"><div class="programa-bloco texto-escuro" style="background:#FFB5A7"><span class="programa-placeholder">+ Programa</span></div></div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="1" data-linha="PROGRAMA" aria-label="Programa da coluna 2"><div class="programa-bloco texto-escuro" style="background:#A8DADC"><span class="programa-placeholder">+ Programa</span></div></div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="2" data-linha="PROGRAMA" aria-label="Programa da coluna 3"><div class="programa-bloco texto-escuro" style="background:#CDB4DB"><span class="programa-placeholder">+ Programa</span></div></div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="3" data-linha="PROGRAMA" aria-label="Programa da coluna 4"><div class="programa-bloco texto-escuro" style="background:#FFC8DD"><span class="programa-placeholder">+ Programa</span></div></div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="4" data-linha="PROGRAMA" aria-label="Programa da coluna 5"><div class="programa-bloco texto-escuro" style="background:#B7E4C7"><span class="programa-placeholder">+ Programa</span></div></div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="5" data-linha="PROGRAMA" aria-label="Programa da coluna 6"><div class="programa-bloco texto-escuro" style="background:#BDE0FE"><span class="programa-placeholder">+ Programa</span></div></div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="6" data-linha="PROGRAMA" aria-label="Programa da coluna 7"><div class="programa-bloco texto-escuro" style="background:#FFE5B4"><span class="programa-placeholder">+ Programa</span></div></div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="7" data-linha="PROGRAMA" aria-label="Programa da coluna 8"><div class="programa-bloco texto-escuro" style="background:#D8BBFF"><span class="programa-placeholder">+ Programa</span></div></div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="8" data-linha="PROGRAMA" aria-label="Programa da coluna 9"><div class="programa-bloco texto-escuro" style="background:#BCEAD5"><span class="programa-placeholder">+ Programa</span></div></div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="9" data-linha="PROGRAMA" aria-label="Programa da coluna 10"><div class="programa-bloco texto-escuro" style="background:#FFD6A5"><span class="programa-placeholder">+ Programa</span></div></div>
-            <div class="cell cell-programa" tabindex="0" role="button" data-col="10" data-linha="PROGRAMA" aria-label="Programa da coluna 11"><div class="programa-bloco texto-escuro" style="background:#E2C2FF"><span class="programa-placeholder">+ Programa</span></div></div>
-
-            <!-- Linha 2: RECURSOS -->
-            <div class="row-label">RECURSOS A SEREM UTILIZADOS:</div>
-            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="0" data-linha="RECURSO" aria-label="Recursos da coluna 1"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="1" data-linha="RECURSO" aria-label="Recursos da coluna 2"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="2" data-linha="RECURSO" aria-label="Recursos da coluna 3"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="3" data-linha="RECURSO" aria-label="Recursos da coluna 4"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="4" data-linha="RECURSO" aria-label="Recursos da coluna 5"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="5" data-linha="RECURSO" aria-label="Recursos da coluna 6"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="6" data-linha="RECURSO" aria-label="Recursos da coluna 7"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="7" data-linha="RECURSO" aria-label="Recursos da coluna 8"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="8" data-linha="RECURSO" aria-label="Recursos da coluna 9"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-first" tabindex="0" role="button" data-col="9" data-linha="RECURSO" aria-label="Recursos da coluna 10"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-first col-last" tabindex="0" role="button" data-col="10" data-linha="RECURSO" aria-label="Recursos da coluna 11"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-
-            <!-- Linha 3: ATIVIDADES -->
-            <div class="row-label">ATIVIDADES PLANEJADAS:</div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="0" data-linha="ATIVIDADE" aria-label="Atividades da coluna 1"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="1" data-linha="ATIVIDADE" aria-label="Atividades da coluna 2"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="2" data-linha="ATIVIDADE" aria-label="Atividades da coluna 3"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="3" data-linha="ATIVIDADE" aria-label="Atividades da coluna 4"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="4" data-linha="ATIVIDADE" aria-label="Atividades da coluna 5"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="5" data-linha="ATIVIDADE" aria-label="Atividades da coluna 6"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="6" data-linha="ATIVIDADE" aria-label="Atividades da coluna 7"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="7" data-linha="ATIVIDADE" aria-label="Atividades da coluna 8"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="8" data-linha="ATIVIDADE" aria-label="Atividades da coluna 9"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="9" data-linha="ATIVIDADE" aria-label="Atividades da coluna 10"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink col-last" tabindex="0" role="button" data-col="10" data-linha="ATIVIDADE" aria-label="Atividades da coluna 11"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-
-            <!-- Linha 4: PREFERÊNCIAS -->
-            <div class="row-label">PREFERÊNCIAS DA CRIANÇA</div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="0" data-linha="PREFERENCIA" aria-label="Preferências da coluna 1"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="1" data-linha="PREFERENCIA" aria-label="Preferências da coluna 2"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="2" data-linha="PREFERENCIA" aria-label="Preferências da coluna 3"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="3" data-linha="PREFERENCIA" aria-label="Preferências da coluna 4"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="4" data-linha="PREFERENCIA" aria-label="Preferências da coluna 5"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="5" data-linha="PREFERENCIA" aria-label="Preferências da coluna 6"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="6" data-linha="PREFERENCIA" aria-label="Preferências da coluna 7"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="7" data-linha="PREFERENCIA" aria-label="Preferências da coluna 8"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="8" data-linha="PREFERENCIA" aria-label="Preferências da coluna 9"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink" tabindex="0" role="button" data-col="9" data-linha="PREFERENCIA" aria-label="Preferências da coluna 10"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink col-last" tabindex="0" role="button" data-col="10" data-linha="PREFERENCIA" aria-label="Preferências da coluna 11"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-
-            <!-- Linha 5: OBSERVAÇÕES -->
-            <div class="row-label row-last">OBSERVAÇÕES:</div>
-            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="0" data-linha="OBSERVACAO" aria-label="Observações da coluna 1"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="1" data-linha="OBSERVACAO" aria-label="Observações da coluna 2"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="2" data-linha="OBSERVACAO" aria-label="Observações da coluna 3"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="3" data-linha="OBSERVACAO" aria-label="Observações da coluna 4"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="4" data-linha="OBSERVACAO" aria-label="Observações da coluna 5"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="5" data-linha="OBSERVACAO" aria-label="Observações da coluna 6"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="6" data-linha="OBSERVACAO" aria-label="Observações da coluna 7"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="7" data-linha="OBSERVACAO" aria-label="Observações da coluna 8"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="8" data-linha="OBSERVACAO" aria-label="Observações da coluna 9"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-last" tabindex="0" role="button" data-col="9" data-linha="OBSERVACAO" aria-label="Observações da coluna 10"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-            <div class="cell cell-pink row-last col-last" tabindex="0" role="button" data-col="10" data-linha="OBSERVACAO" aria-label="Observações da coluna 11"><div class="cell-content"></div><span class="cell-hint no-print">+ Adicionar</span></div>
-        </div>
+        <div class="semana-grid-scroll">
+            <div class="semana-grid" id="semanaGrid"><!-- montado via JS --></div>
         </div>
     </section>
 </main>
@@ -165,9 +99,9 @@
 <!-- ============================ Modal de seleção ============================ -->
 <div class="modal-backdrop no-print" id="modal" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
-        <header class="modal-header" id="modalHeader">
+        <header class="modal-header texto-escuro" id="modalHeader">
             <div>
-                <span class="modal-kicker" id="modalKicker">Coluna 1</span>
+                <span class="modal-kicker" id="modalKicker">Segunda-feira</span>
                 <h2 id="modalTitulo">Selecionar itens</h2>
             </div>
             <button type="button" class="icon-btn" data-close aria-label="Fechar">&times;</button>
@@ -177,20 +111,13 @@
             <div class="contexto-programa" id="contextoPrograma" hidden></div>
 
             <div>
-                <div class="section-header-inline">
-                    <p class="section-title" style="margin:0">Selecionados neste quadrado</p>
-                    <button type="button" id="btnAutoPreencherModal" class="btn btn-outline btn-xs" hidden>
-                        ⚡ Auto-preencher sugeridos
-                    </button>
-                </div>
+                <p class="section-title" id="tituloSelecionados" style="margin:0 0 6px">Selecionados</p>
                 <div class="selecionados" id="selecionados"></div>
             </div>
 
-            <div>
-                <div class="search-box">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input id="buscaItem" class="input" type="search" placeholder="Pesquisar no banco de dados..." autocomplete="off" aria-label="Pesquisar itens">
-                </div>
+            <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input id="buscaItem" class="input" type="search" placeholder="Pesquisar no banco de dados..." autocomplete="off" aria-label="Pesquisar itens">
             </div>
 
             <div class="item-list" id="listaItens" role="group" aria-label="Itens do catálogo"></div>
@@ -216,21 +143,16 @@
                 </form>
             </details>
 
-            <div>
-                <label class="form-label" for="textoLivre">Anotação livre (complemento do profissional)</label>
-                <textarea id="textoLivre" class="textarea" maxlength="4000" placeholder="Ex.: realizar 3 tentativas, usar reforço imediato..."></textarea>
-            </div>
-
-            <div id="corWrap" hidden>
-                <p class="section-title">Cor da coluna</p>
-                <div class="paleta-swatches" id="paletaSwatches"></div>
+            <div id="textoWrap" hidden>
+                <label class="form-label" for="textoLivre">Complemento livre desta linha</label>
+                <textarea id="textoLivre" class="textarea" maxlength="400" placeholder="Ex.: 3 tentativas, reforço imediato..."></textarea>
             </div>
         </div>
 
         <footer class="modal-footer">
             <span id="modalStatus" class="save-status" style="text-align:left"></span>
             <div class="actions">
-                <button type="button" class="btn btn-danger btn-sm" id="btnLimparCelula">Limpar quadrado</button>
+                <button type="button" class="btn btn-danger btn-sm" id="btnLimparCelula">Limpar</button>
                 <button type="button" class="btn btn-primary btn-sm" data-close>Concluir</button>
             </div>
         </footer>
@@ -239,15 +161,7 @@
 
 <div class="toasts no-print" id="toasts" aria-live="polite"></div>
 
-<script>
-    window.PEI_CONFIG = {
-        totalColunas: 11,
-        paleta: ["#FFB5A7", "#A8DADC", "#CDB4DB", "#FFC8DD", "#B7E4C7", "#BDE0FE", "#FFE5B4", "#D8BBFF", "#BCEAD5", "#FFD6A5", "#E2C2FF"],
-        criancaSelecionada: null
-    };
-</script>
 <script src="/js/api.js"></script>
 <script src="/js/quadro.js"></script>
 </body>
 </html>
-

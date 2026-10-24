@@ -1,45 +1,52 @@
 /* =====================================================================
-   PEI — Quadro de Planejamento dos Atendimentos
-   - Carrega o quadro da criança via API REST
-   - Clique em um quadrado abre o seletor (modal) sem recarregar a página
-   - Sugestões relacionais: recursos/atividades vinculados ao programa da coluna
-   - Múltipla seleção, texto livre, cadastro rápido e autosave assíncrono
+   PEI — Quadro Semanal de Planejamento dos Atendimentos
+   - Colunas: Segunda a Sexta-feira
+   - Linhas: Programas (20 por dia), Atividades planejadas e Recursos
+     utilizados (linha N = programa N) e Observações do dia
+   - Seleção via modal a partir do banco de dados (/api/catalogo)
+   - Estado livre por pessoa: rascunho salvo apenas no navegador local
    ===================================================================== */
 (function () {
     'use strict';
 
-    const { api, toast, esc, debounce, corClara, formatarData } = window.PEI;
-    const CFG = window.PEI_CONFIG || {};
-    const PALETA = CFG.paleta || [];
+    const { api, toast, esc, debounce, formatarData } = window.PEI;
 
-    const LINHAS = {
-        PROGRAMA:    { nome: 'Programas',                    singular: 'programa' },
-        RECURSO:     { nome: 'Recursos a serem utilizados',  singular: 'recurso' },
-        ATIVIDADE:   { nome: 'Atividades planejadas',        singular: 'atividade' },
-        PREFERENCIA: { nome: 'Preferências da criança',      singular: 'preferência' },
-        OBSERVACAO:  { nome: 'Observações',                  singular: 'observação' }
+    const N = 20;
+    const STORAGE_KEY = 'pei_rascunho_semana_v1';
+
+    const DIAS = [
+        { k: 'SEG', nome: 'Segunda-feira', css: 'dia-seg', cor: '#F7C6D6' },
+        { k: 'TER', nome: 'Terça-feira',   css: 'dia-ter', cor: '#DCD2F6' },
+        { k: 'QUA', nome: 'Quarta-feira',  css: 'dia-qua', cor: '#C8EEDF' },
+        { k: 'QUI', nome: 'Quinta-feira',  css: 'dia-qui', cor: '#FBE7A9' },
+        { k: 'SEX', nome: 'Sexta-feira',   css: 'dia-sex', cor: '#CBE2F8' }
+    ];
+    const DIA_POR_K = Object.fromEntries(DIAS.map(d => [d.k, d]));
+
+    const TIPOS = {
+        PROGRAMA:  { nome: 'Programas',             singular: 'programa' },
+        ATIVIDADE: { nome: 'Atividades planejadas', singular: 'atividade' },
+        RECURSO:   { nome: 'Recursos utilizados',   singular: 'recurso' }
     };
-    const ACEITA_VINCULO = new Set(['RECURSO', 'ATIVIDADE']);
+    const CHAVE_LISTA = { ATIVIDADE: 'atividades', RECURSO: 'recursos' };
+
+    const ICONES = {
+        DIA: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="3"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/><circle cx="8" cy="14" r=".6"/><circle cx="12" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/><circle cx="8" cy="17.5" r=".6"/><circle cx="12" cy="17.5" r=".6"/></svg>',
+        PROGRAMA: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>',
+        ATIVIDADE: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5l4 4L8 20H4v-4z"/><line x1="13.5" y1="6.5" x2="17.5" y2="10.5"/></svg>',
+        RECURSO: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v4.5c0 1.66 3.58 3 8 3s8-1.34 8-3V5.5"/><path d="M4 10v4.5c0 1.66 3.58 3 8 3s8-1.34 8-3V10"/><path d="M4 14.5V19c0 1.66 3.58 3 8 3s8-1.34 8-3v-4.5"/></svg>',
+        OBSERVACAO: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2.5 14.9 8.6 21.5 9.4 16.6 13.9 17.9 20.5 12 17.2 6.1 20.5 7.4 13.9 2.5 9.4 9.1 8.6"/></svg>'
+    };
 
     const $ = id => document.getElementById(id);
     const els = {
-        grid: $('peiGrid'),
+        grid: $('semanaGrid'),
+        meta: $('semanaMeta'),
         inputCrianca: $('inputCrianca'),
         inputAt: $('inputAt'),
+        inputSemana: $('inputSemana'),
         btnLimparQuadro: $('btnLimparQuadro'),
         btnImprimir: $('btnImprimir'),
-        status: $('saveStatus'),
-        titulo: $('tituloQuadro'),
-        tituloPrint: $('tituloPrint'),
-        dataInicio: $('dataInicioQuadro'),
-        diaSemana: $('diaSemanaQuadro'),
-        metaPeriodoPrint: $('metaPeriodoPrint'),
-        metaCrianca: $('metaCrianca'),
-        metaAt: $('metaAt'),
-        metaData: $('metaData'),
-        btnAddPrograma: $('btnAdicionarPrograma'),
-        btnPrimeiroPrograma: $('btnPrimeiroPrograma'),
-        semProgramasBox: $('semProgramasBox'),
         // modal
         modal: $('modal'),
         modalHeader: $('modalHeader'),
@@ -47,8 +54,8 @@
         modalTitulo: $('modalTitulo'),
         modalStatus: $('modalStatus'),
         contexto: $('contextoPrograma'),
+        tituloSelecionados: $('tituloSelecionados'),
         selecionados: $('selecionados'),
-        btnAutoPreencherModal: $('btnAutoPreencherModal'),
         busca: $('buscaItem'),
         lista: $('listaItens'),
         quickAdd: $('quickAdd'),
@@ -57,519 +64,390 @@
         qaDescricao: $('qaDescricao'),
         qaVinculoWrap: $('qaVinculoWrap'),
         qaPrograma: $('qaPrograma'),
+        textoWrap: $('textoWrap'),
         textoLivre: $('textoLivre'),
-        corWrap: $('corWrap'),
-        swatches: $('paletaSwatches'),
         btnLimpar: $('btnLimparCelula')
     };
 
     if (!els.grid) return;
 
-    const state = {
-        quadro: { id: 0, titulo: 'Planejamento dos Atendimentos' },
-        crianca: null,
-        celulas: new Map(),
-        pendentes: 0,
-        temErro: false
-    };
-    const chave = (linha, col) => `${linha}:${col}`;
+    // =================================================================== estado
 
-    // =================================================================== cabeçalho e estado livre (em memória)
+    function novaLinha() { return { itens: [], texto: '' }; }
 
-    const DIAS_SEMANA = [
-        'domingo',
-        'segunda-feira',
-        'terça-feira',
-        'quarta-feira',
-        'quinta-feira',
-        'sexta-feira',
-        'sábado'
-    ];
+    function novoDia() {
+        return {
+            programas: Array(N).fill(null),
+            marcados: Array(N).fill(false),
+            atividades: Array.from({ length: N }, novaLinha),
+            recursos: Array.from({ length: N }, novaLinha),
+            observacoes: ''
+        };
+    }
 
-    function diaDaSemana(iso) {
-        if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return '';
+    const state = { dias: {} };
+    function resetarDias() { DIAS.forEach(d => { state.dias[d.k] = novoDia(); }); }
+    resetarDias();
+
+    // =================================================================== datas
+
+    function isoParaUTC(iso) {
+        if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return null;
         const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-        const dt = new Date(Date.UTC(y, m - 1, d));
-        return DIAS_SEMANA[dt.getUTCDay()] || '';
+        return new Date(Date.UTC(y, m - 1, d));
     }
 
-    function formatarDataComDiaSemana(iso) {
-        if (!iso) return '—';
-        const dataFmt = formatarData(iso);
-        const dia = diaDaSemana(iso);
-        return dia ? `${dataFmt} - ${dia}` : dataFmt;
+    function utcParaIso(dt) { return dt.toISOString().slice(0, 10); }
+
+    /** Datas (ISO) de segunda a sexta da semana que contém a data escolhida. */
+    function datasDaSemana() {
+        const base = isoParaUTC(els.inputSemana && els.inputSemana.value);
+        if (!base) return null;
+        const dow = base.getUTCDay(); // 0 = domingo
+        const deltaSegunda = dow === 0 ? 1 : (dow === 6 ? 2 : 1 - dow);
+        const segunda = new Date(base.getTime() + deltaSegunda * 86400000);
+        return DIAS.map((_, i) => utcParaIso(new Date(segunda.getTime() + i * 86400000)));
     }
 
-    const STORAGE_KEY = 'pei_rascunho_local_v1';
+    // =================================================================== montagem da grade
 
-    function salvarRascunhoLocal() {
+    function rotulo(icone, titulo, sub, extraClass) {
+        return `<div class="sem-label ${extraClass || ''}">
+            <span class="sem-label-icone" aria-hidden="true">${ICONES[icone]}</span>
+            <span class="sem-label-texto">${titulo}${sub ? `<small>${sub}</small>` : ''}</span>
+        </div>`;
+    }
+
+    function slotsHtml(tipo, diaK) {
+        let html = '';
+        for (let i = 0; i < N; i++) {
+            if (tipo === 'PROGRAMA') {
+                html += `<div class="slot slot-prog" data-slot="${i}">
+                    <input type="checkbox" class="slot-check" data-check="${diaK}:${i}" aria-label="Marcar programa ${i + 1} de ${DIA_POR_K[diaK].nome}">
+                    <span class="slot-num">${i + 1}.</span>
+                    <span class="slot-linha" tabindex="0" role="button" data-abrir="PROGRAMA" data-dia="${diaK}" data-i="${i}"></span>
+                </div>`;
+            } else {
+                html += `<div class="slot slot-traco" data-slot="${i}">
+                    <span class="slot-num">${i + 1}.</span>
+                    <span class="slot-linha" tabindex="0" role="button" data-abrir="${tipo}" data-dia="${diaK}" data-i="${i}"></span>
+                </div>`;
+            }
+        }
+        return html;
+    }
+
+    function montarGrade() {
+        let html = '';
+        // Linha: DIA
+        html += `<div class="sem-label sem-label-dia"><span class="sem-label-icone" aria-hidden="true">${ICONES.DIA}</span><span class="sem-label-texto">DIA</span></div>`;
+        DIAS.forEach(d => {
+            html += `<div class="dia-head ${d.css}"><span class="coracao" aria-hidden="true">♥</span>
+                <span class="dia-nome">${d.nome.toUpperCase()}</span>
+                <span class="dia-data" data-data="${d.k}"></span></div>`;
+        });
+        // Linha: PROGRAMAS
+        html += rotulo('PROGRAMA', 'PROGRAMAS', '(20 no total)');
+        DIAS.forEach(d => {
+            html += `<div class="bloco bloco-prog ${d.css}" data-bloco="PROGRAMA:${d.k}"><div class="lista-2col">${slotsHtml('PROGRAMA', d.k)}</div></div>`;
+        });
+        // Linha: ATIVIDADES
+        html += rotulo('ATIVIDADE', 'ATIVIDADES PLANEJADAS', '(de cada programa)');
+        DIAS.forEach(d => {
+            html += `<div class="bloco ${d.css}" data-bloco="ATIVIDADE:${d.k}"><div class="lista-2col">${slotsHtml('ATIVIDADE', d.k)}</div></div>`;
+        });
+        // Linha: RECURSOS
+        html += rotulo('RECURSO', 'RECURSOS UTILIZADOS', '(de cada programa)');
+        DIAS.forEach(d => {
+            html += `<div class="bloco ${d.css}" data-bloco="RECURSO:${d.k}"><div class="lista-2col">${slotsHtml('RECURSO', d.k)}</div></div>`;
+        });
+        // Linha: OBSERVAÇÕES
+        html += rotulo('OBSERVACAO', 'OBSERVAÇÕES DO DIA', '');
+        DIAS.forEach(d => {
+            html += `<div class="bloco bloco-obs ${d.css}">
+                <span class="coracao" aria-hidden="true">♥</span>
+                <textarea class="obs-textarea" data-obs="${d.k}" maxlength="1500" rows="4"
+                    placeholder="Observações de ${d.nome.toLowerCase()}..." aria-label="Observações de ${d.nome}"></textarea>
+            </div>`;
+        });
+        els.grid.innerHTML = html;
+    }
+
+    // =================================================================== renderização
+
+    function textoLinha(linha) {
+        const itens = (linha.itens || []).map(i => i.titulo).join(', ');
+        return { itens, texto: (linha.texto || '').trim() };
+    }
+
+    function linhaTemConteudo(linha) {
+        return Boolean((linha.itens && linha.itens.length) || (linha.texto && linha.texto.trim()));
+    }
+
+    function renderSlot(tipo, diaK, i) {
+        const el = els.grid.querySelector(`.slot-linha[data-abrir="${tipo}"][data-dia="${diaK}"][data-i="${i}"]`);
+        if (!el) return;
+        const dia = state.dias[diaK];
+
+        if (tipo === 'PROGRAMA') {
+            const p = dia.programas[i];
+            el.innerHTML = p
+                ? `<span class="slot-itens">${esc(p.titulo)}</span><button type="button" class="slot-x no-print" data-remover="PROGRAMA:${diaK}:${i}" title="Remover programa" aria-label="Remover ${esc(p.titulo)}">&times;</button>`
+                : '';
+            el.title = p ? p.titulo : `Adicionar programa ${i + 1}`;
+            el.classList.toggle('preenchido', Boolean(p));
+            const cb = els.grid.querySelector(`[data-check="${diaK}:${i}"]`);
+            if (cb) cb.checked = Boolean(dia.marcados[i]);
+            return;
+        }
+
+        const linha = dia[CHAVE_LISTA[tipo]][i];
+        const { itens, texto } = textoLinha(linha);
+        const tem = linhaTemConteudo(linha);
+        el.innerHTML = tem
+            ? `<span class="slot-itens">${esc(itens)}</span>${texto ? `<span class="texto-livre">${itens ? ' — ' : ''}${esc(texto)}</span>` : ''}<button type="button" class="slot-x no-print" data-remover="${tipo}:${diaK}:${i}" title="Limpar linha" aria-label="Limpar linha ${i + 1}">&times;</button>`
+            : '';
+        el.title = tem ? [itens, texto].filter(Boolean).join(' — ') : `Adicionar ${TIPOS[tipo].singular} da linha ${i + 1}`;
+        el.classList.toggle('preenchido', tem);
+    }
+
+    function renderDia(diaK) {
+        for (let i = 0; i < N; i++) {
+            renderSlot('PROGRAMA', diaK, i);
+            renderSlot('ATIVIDADE', diaK, i);
+            renderSlot('RECURSO', diaK, i);
+        }
+        const ta = els.grid.querySelector(`[data-obs="${diaK}"]`);
+        if (ta && ta.value !== state.dias[diaK].observacoes) ta.value = state.dias[diaK].observacoes || '';
+    }
+
+    function renderTudo() {
+        DIAS.forEach(d => renderDia(d.k));
+        atualizarCabecalho();
+    }
+
+    function atualizarCabecalho() {
+        const crianca = els.inputCrianca && els.inputCrianca.value.trim();
+        const at = els.inputAt && els.inputAt.value.trim();
+        const datas = datasDaSemana();
+
+        DIAS.forEach((d, idx) => {
+            const span = els.grid.querySelector(`[data-data="${d.k}"]`);
+            if (span) span.textContent = datas ? formatarData(datas[idx]).slice(0, 5) : '';
+        });
+
+        const partes = [];
+        partes.push(`Criança: <strong>${crianca ? esc(crianca) : '—'}</strong>`);
+        partes.push(`AT: <strong>${at ? esc(at) : '—'}</strong>`);
+        if (datas) {
+            partes.push(`Semana: <strong>${esc(formatarData(datas[0]))} a ${esc(formatarData(datas[4]))}</strong>`);
+        }
+        if (els.meta) els.meta.innerHTML = partes.join('<span class="meta-sep">·</span>');
+        salvarRascunho();
+    }
+
+    // =================================================================== rascunho local (sobrevive ao F5)
+
+    function salvarRascunho() {
         try {
-            const rascunho = {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 crianca: els.inputCrianca ? els.inputCrianca.value : '',
                 at: els.inputAt ? els.inputAt.value : '',
-                titulo: els.titulo ? els.titulo.value : 'Planejamento dos Atendimentos',
-                dataInicio: els.dataInicio ? els.dataInicio.value : '',
-                celulas: Array.from(state.celulas.values()).filter(c =>
-                    (c.itensSelecionados && c.itensSelecionados.length > 0) ||
-                    (c.textoLivre && c.textoLivre.trim()) ||
-                    (c.tipoLinha === 'PROGRAMA' && c.corCabecalho)
-                )
-            };
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(rascunho));
-        } catch (_) {
-            // ignora caso localStorage esteja indisponível
-        }
+                semana: els.inputSemana ? els.inputSemana.value : '',
+                dias: state.dias
+            }));
+        } catch (_) { /* localStorage indisponível */ }
     }
 
-    function restaurarRascunhoLocal() {
+    function normalizarLinha(l) {
+        return {
+            itens: Array.isArray(l && l.itens) ? l.itens.filter(x => x && x.titulo) : [],
+            texto: (l && typeof l.texto === 'string') ? l.texto : ''
+        };
+    }
+
+    function restaurarRascunho() {
         try {
             const raw = window.localStorage.getItem(STORAGE_KEY);
             if (!raw) return false;
             const r = JSON.parse(raw);
-            if (!r || typeof r !== 'object') return false;
-            state.celulas.clear();
-            if (Array.isArray(r.celulas)) {
-                r.celulas.forEach(c => {
-                    if (c && c.tipoLinha && typeof c.indiceColuna === 'number') {
-                        state.celulas.set(chave(c.tipoLinha, c.indiceColuna), {
-                            indiceColuna: c.indiceColuna,
-                            tipoLinha: c.tipoLinha,
-                            corCabecalho: c.corCabecalho || PALETA[c.indiceColuna],
-                            itensSelecionados: Array.isArray(c.itensSelecionados) ? c.itensSelecionados : [],
-                            textoLivre: c.textoLivre || null
-                        });
-                    }
-                });
-            }
+            if (!r || typeof r !== 'object' || !r.dias) return false;
+            DIAS.forEach(d => {
+                const src = r.dias[d.k] || {};
+                const dia = novoDia();
+                for (let i = 0; i < N; i++) {
+                    const p = Array.isArray(src.programas) ? src.programas[i] : null;
+                    dia.programas[i] = p && p.titulo ? { id: p.id, titulo: p.titulo } : null;
+                    dia.marcados[i] = Boolean(Array.isArray(src.marcados) && src.marcados[i]);
+                    dia.atividades[i] = normalizarLinha(Array.isArray(src.atividades) ? src.atividades[i] : null);
+                    dia.recursos[i] = normalizarLinha(Array.isArray(src.recursos) ? src.recursos[i] : null);
+                }
+                dia.observacoes = typeof src.observacoes === 'string' ? src.observacoes : '';
+                state.dias[d.k] = dia;
+            });
             if (els.inputCrianca) els.inputCrianca.value = r.crianca || '';
             if (els.inputAt) els.inputAt.value = r.at || '';
-            if (els.dataInicio) els.dataInicio.value = r.dataInicio || '';
-            if (els.titulo) els.titulo.value = r.titulo || 'Planejamento dos Atendimentos';
-            atualizarTextoPeriodoPrint();
-            renderTodas();
+            if (els.inputSemana) els.inputSemana.value = r.semana || '';
+            renderTudo();
             return true;
         } catch (_) {
             return false;
         }
     }
 
-    function atualizarTextoPeriodoPrint() {
-        const nome = els.inputCrianca && els.inputCrianca.value.trim() ? els.inputCrianca.value.trim() : '—';
-        if (els.metaCrianca) {
-            els.metaCrianca.textContent = nome;
-        }
-        const nomeAt = els.inputAt && els.inputAt.value.trim() ? els.inputAt.value.trim() : '—';
-        if (els.metaAt) {
-            els.metaAt.textContent = nomeAt;
-        }
-        const titulo = els.titulo && els.titulo.value.trim() ? els.titulo.value.trim() : 'Planejamento dos Atendimentos';
-        if (els.tituloPrint) {
-            els.tituloPrint.textContent = titulo;
-        }
-        const iso = (els.dataInicio && els.dataInicio.value) || '';
-        const dia = diaDaSemana(iso);
-        if (els.diaSemana) {
-            els.diaSemana.textContent = dia ? `- ${dia}` : '';
-        }
-        if (els.metaData) {
-            els.metaData.innerHTML = iso
-                ? `Data: <strong>${esc(formatarDataComDiaSemana(iso))}</strong>`
-                : 'Data: <strong>—</strong>';
-        }
-        salvarRascunhoLocal();
-    }
-
     function limparQuadroTodo(silencioso) {
-        const tinhaConteudo = Array.from({ length: CFG.totalColunas || 11 }, (_, i) => i).some(colunaTemPrograma)
-            || Boolean(els.inputCrianca && els.inputCrianca.value.trim())
-            || Boolean(els.inputAt && els.inputAt.value.trim());
-        if (!silencioso && tinhaConteudo && !window.confirm('Deseja limpar todo o quadro atual?')) {
+        const temConteudo = DIAS.some(d => {
+            const dia = state.dias[d.k];
+            return dia.programas.some(Boolean) || dia.atividades.some(linhaTemConteudo)
+                || dia.recursos.some(linhaTemConteudo) || (dia.observacoes || '').trim();
+        }) || Boolean(els.inputCrianca && els.inputCrianca.value.trim())
+          || Boolean(els.inputAt && els.inputAt.value.trim());
+
+        if (!silencioso && temConteudo && !window.confirm('Deseja limpar todo o quadro e começar um novo planejamento?')) {
             return;
         }
-        state.celulas.clear();
+        resetarDias();
         if (els.inputCrianca) els.inputCrianca.value = '';
         if (els.inputAt) els.inputAt.value = '';
-        if (els.dataInicio) els.dataInicio.value = '';
-        if (els.titulo) els.titulo.value = 'Planejamento dos Atendimentos';
-        try { window.localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-        if (window.PEI.restaurarItensSessao) window.PEI.restaurarItensSessao();
+        if (els.inputSemana) els.inputSemana.value = '';
+        try { window.localStorage.removeItem(STORAGE_KEY); } catch (_) { /* ignora */ }
+        if (!silencioso && window.PEI.restaurarItensSessao) window.PEI.restaurarItensSessao();
         modal.todosProgramas = null;
-        atualizarTextoPeriodoPrint();
-        renderTodas();
-        if (!silencioso) {
-            toast('Novo planejamento iniciado! Todas as opções do banco foram restauradas.', 'sucesso');
-        }
+        renderTudo();
+        if (!silencioso) toast('Novo planejamento iniciado! Todas as opções do banco foram restauradas.', 'sucesso');
     }
 
-    function proximaColunaLivre() {
-        const total = CFG.totalColunas || 11;
-        for (let col = 0; col < total; col++) {
-            if (!colunaTemPrograma(col)) return col;
-        }
-        return -1;
+    // =================================================================== regras de negócio
+
+    function primeiraLinhaLivre(diaK) {
+        return state.dias[diaK].programas.findIndex(p => !p);
     }
 
-    function getCelula(linha, col) {
-        const k = chave(linha, col);
-        let c = state.celulas.get(k);
-        if (!c) {
-            c = { indiceColuna: col, tipoLinha: linha, corCabecalho: PALETA[col], itensSelecionados: [], textoLivre: null };
-            state.celulas.set(k, c);
-        }
-        return c;
-    }
-
-    const programasDaColuna = col => getCelula('PROGRAMA', col).itensSelecionados;
-
-    // =================================================================== renderização da grade
-
-    function cellEl(linha, col) {
-        return els.grid.querySelector(`.cell[data-linha="${linha}"][data-col="${col}"]`);
-    }
-
-    function renderTodas() {
-        els.grid.querySelectorAll('.cell').forEach(el =>
-            renderCelula(el.dataset.linha, Number(el.dataset.col)));
-        atualizarColunasVisiveis();
-    }
-
-    function colunaTemPrograma(col) {
-        const c = getCelula('PROGRAMA', col);
-        return Boolean((c.itensSelecionados && c.itensSelecionados.length > 0) || (c.textoLivre && c.textoLivre.trim()));
-    }
-
-    function atualizarColunasVisiveis() {
-        const total = CFG.totalColunas || 11;
-        const visiveis = [];
-        for (let col = 0; col < total; col++) {
-            const emEdicaoNoModal = !els.modal.hidden && modal.col === col;
-            if (colunaTemPrograma(col) || emEdicaoNoModal) {
-                visiveis.push(col);
-            }
-        }
-        const setVisiveis = new Set(visiveis);
-        const primeiraVisivel = visiveis.length ? visiveis[0] : -1;
-        const ultimaVisivel = visiveis.length ? visiveis[visiveis.length - 1] : -1;
-
-        els.grid.querySelectorAll('.cell').forEach(el => {
-            const col = Number(el.dataset.col);
-            const visivel = setVisiveis.has(col);
-            el.hidden = !visivel;
-            if (el.classList.contains('cell-pink')) {
-                el.classList.toggle('col-last', col === ultimaVisivel);
-            }
-            if (el.classList.contains('cell-programa') && visivel) {
-                const btnEsq = el.querySelector('[data-mover-dir="-1"]');
-                const btnDir = el.querySelector('[data-mover-dir="1"]');
-                if (btnEsq) btnEsq.disabled = col === primeiraVisivel;
-                if (btnDir) btnDir.disabled = col === ultimaVisivel;
-            }
-        });
-
-        const semProgramas = visiveis.length === 0;
-        els.grid.hidden = semProgramas;
-        if (els.semProgramasBox) els.semProgramasBox.hidden = !semProgramas;
-        if (!semProgramas) {
-            els.grid.style.setProperty('--cols', String(visiveis.length));
-        }
-
-        if (els.btnAddPrograma) {
-            const ocupadas = Array.from({ length: total }, (_, i) => i).filter(colunaTemPrograma).length;
-            els.btnAddPrograma.disabled = ocupadas >= total;
-        }
-    }
-
-    function adicionarPrograma() {
-        if (!state.quadro) return;
-        const livre = proximaColunaLivre();
-        if (livre === -1) {
-            toast('Todas as 11 colunas de programas já foram preenchidas.', 'erro');
-            return;
-        }
-        abrirModal('PROGRAMA', livre, els.btnAddPrograma);
-        atualizarColunasVisiveis();
-    }
-
-    function renderCelula(linha, col) {
-        const el = cellEl(linha, col);
-        if (!el) return;
-        const c = getCelula(linha, col);
-        const itens = c.itensSelecionados || [];
-        const texto = c.textoLivre ? `<span class="texto-livre">${esc(c.textoLivre)}</span>` : '';
-
-        if (linha === 'PROGRAMA') {
-            const bloco = el.querySelector('.programa-bloco');
-            const cor = c.corCabecalho || PALETA[col];
-            bloco.style.background = cor;
-            bloco.classList.toggle('texto-escuro', corClara(cor));
-            const barraAcoes = `
-                <div class="programa-actions no-print">
-                    <span class="programa-actions-group">
-                        <button type="button" class="programa-btn" data-mover-coluna="${col}" data-mover-dir="-1" title="Mover programa para a esquerda" aria-label="Mover coluna ${col + 1} para a esquerda">&#9664;</button>
-                        <button type="button" class="programa-btn" data-mover-coluna="${col}" data-mover-dir="1" title="Mover programa para a direita" aria-label="Mover coluna ${col + 1} para a direita">&#9654;</button>
-                    </span>
-                    <span class="programa-actions-group">
-                        <button type="button" class="programa-btn" data-autopreencher-coluna="${col}" title="Auto-preencher recursos e atividades vinculados a este programa" aria-label="Auto-preencher coluna ${col + 1}">&#9889;</button>
-                        <button type="button" class="programa-remove" data-remover-coluna="${col}" title="Excluir este programa do quadro" aria-label="Excluir programa da coluna ${col + 1}">&times;</button>
-                    </span>
-                </div>`;
-            bloco.innerHTML = (itens.length || texto)
-                ? barraAcoes + itens.map(i => `<span class="programa-titulo">${esc(i.titulo)}</span>`).join('') + texto
-                : '';
-        } else {
-            el.querySelector('.cell-content').innerHTML =
-                itens.map(i => `<span class="chip"><span>${esc(i.titulo)}</span><button type="button" class="chip-remove no-print" data-remover-chip="${i.id}" title="Excluir item" aria-label="Remover ${esc(i.titulo)}">&times;</button></span>`).join('') + texto;
-            el.querySelector('.cell-hint').hidden = itens.length > 0 || !!c.textoLivre;
-        }
-    }
-
-    function excluirColuna(col) {
-        const progCel = getCelula('PROGRAMA', col);
-        const nomeProg = (progCel.itensSelecionados && progCel.itensSelecionados[0])
-            ? progCel.itensSelecionados[0].titulo
-            : (progCel.textoLivre || `Coluna ${col + 1}`);
-
-        const outrasLinhas = ['RECURSO', 'ATIVIDADE', 'PREFERENCIA', 'OBSERVACAO'];
-        const temConteudoAbaixo = outrasLinhas.some(l => {
-            const c = getCelula(l, col);
-            return (c.itensSelecionados && c.itensSelecionados.length > 0) || (c.textoLivre && c.textoLivre.trim());
-        });
-
-        if (temConteudoAbaixo && !window.confirm(`Deseja excluir o programa "${nomeProg}" e limpar os itens desta coluna?`)) {
-            return;
-        }
-
-        ['PROGRAMA', ...outrasLinhas].forEach(l => {
-            const c = getCelula(l, col);
-            const tinhaAlgo = (c.itensSelecionados && c.itensSelecionados.length > 0) || Boolean(c.textoLivre);
-            c.itensSelecionados = [];
-            c.textoLivre = null;
-            renderCelula(l, col);
-            if (tinhaAlgo) {
-                salvarCelula(l, col);
-            }
-        });
-        atualizarColunasVisiveis();
-        toast(`Programa "${nomeProg}" removido do quadro.`, 'sucesso');
-    }
-
-    function removerChipDireto(linha, col, itemId) {
-        const c = getCelula(linha, col);
-        if (!c.itensSelecionados || !c.itensSelecionados.length) return;
-        c.itensSelecionados = c.itensSelecionados.filter(i => i.id !== itemId);
-        renderCelula(linha, col);
-        salvarCelula(linha, col);
-    }
-
-    function moverColuna(col, direcao) {
-        const total = CFG.totalColunas || 11;
-        const visiveis = [];
-        for (let i = 0; i < total; i++) {
-            if (colunaTemPrograma(i)) visiveis.push(i);
-        }
-        const pos = visiveis.indexOf(col);
-        const alvoPos = pos + direcao;
-        if (pos === -1 || alvoPos < 0 || alvoPos >= visiveis.length) return;
-        const colAlvo = visiveis[alvoPos];
-
-        const todasLinhas = ['PROGRAMA', 'RECURSO', 'ATIVIDADE', 'PREFERENCIA', 'OBSERVACAO'];
-        todasLinhas.forEach(l => {
-            const cA = getCelula(l, col);
-            const cB = getCelula(l, colAlvo);
-            const tmpItens = cA.itensSelecionados;
-            const tmpTexto = cA.textoLivre;
-            cA.itensSelecionados = cB.itensSelecionados;
-            cA.textoLivre = cB.textoLivre;
-            cB.itensSelecionados = tmpItens;
-            cB.textoLivre = tmpTexto;
-            renderCelula(l, col);
-            renderCelula(l, colAlvo);
-            salvarCelula(l, col);
-            salvarCelula(l, colAlvo);
-        });
-        atualizarColunasVisiveis();
-    }
-
-    async function autoPreencherColuna(col, silencioso) {
-        const progs = programasDaColuna(col);
-        if (!progs || !progs.length) {
-            if (!silencioso) toast('Selecione um programa nesta coluna primeiro.', 'erro');
-            return 0;
-        }
+    /** Ao adicionar um programa na linha N, preenche atividades/recursos vinculados (se a linha estiver vazia). */
+    async function autoPreencherLinha(diaK, i) {
+        const p = state.dias[diaK].programas[i];
+        if (!p || !p.id) return;
         try {
-            const qs = progs.map(p => `programaId=${encodeURIComponent(p.id)}`).join('&');
-            const [recursos, atividades] = await Promise.all([
-                api.get(`/api/catalogo?categoria=RECURSO&${qs}`),
-                api.get(`/api/catalogo?categoria=ATIVIDADE&${qs}`)
+            const [atividades, recursos] = await Promise.all([
+                api.get(`/api/catalogo?categoria=ATIVIDADE&programaId=${encodeURIComponent(p.id)}`),
+                api.get(`/api/catalogo?categoria=RECURSO&programaId=${encodeURIComponent(p.id)}`)
             ]);
-            const recSugeridos = recursos.filter(i => i.sugerido);
-            const atvSugeridas = atividades.filter(i => i.sugerido);
-
-            let adicionados = 0;
-            if (recSugeridos.length) {
-                const cRec = getCelula('RECURSO', col);
-                const ids = new Set((cRec.itensSelecionados || []).map(i => i.id));
-                recSugeridos.forEach(item => {
-                    if (!ids.has(item.id)) {
-                        cRec.itensSelecionados.push(item);
-                        adicionados++;
-                    }
-                });
-                renderCelula('RECURSO', col);
-                salvarCelula('RECURSO', col);
+            const atual = state.dias[diaK].programas[i];
+            if (!atual || atual.id !== p.id) return; // mudou enquanto carregava
+            const linhaA = state.dias[diaK].atividades[i];
+            const linhaR = state.dias[diaK].recursos[i];
+            const sugA = atividades.filter(x => x.sugerido);
+            const sugR = recursos.filter(x => x.sugerido);
+            if (!linhaTemConteudo(linhaA) && sugA.length) {
+                linhaA.itens = sugA.map(x => ({ id: x.id, titulo: x.titulo }));
+                renderSlot('ATIVIDADE', diaK, i);
             }
-            if (atvSugeridas.length) {
-                const cAtv = getCelula('ATIVIDADE', col);
-                const ids = new Set((cAtv.itensSelecionados || []).map(i => i.id));
-                atvSugeridas.forEach(item => {
-                    if (!ids.has(item.id)) {
-                        cAtv.itensSelecionados.push(item);
-                        adicionados++;
-                    }
-                });
-                renderCelula('ATIVIDADE', col);
-                salvarCelula('ATIVIDADE', col);
+            if (!linhaTemConteudo(linhaR) && sugR.length) {
+                linhaR.itens = sugR.map(x => ({ id: x.id, titulo: x.titulo }));
+                renderSlot('RECURSO', diaK, i);
             }
-
-            if (!silencioso) {
-                if (adicionados > 0) {
-                    toast(`${adicionados} item(ns) sugerido(s) preenchido(s) na Coluna ${col + 1}!`, 'sucesso');
-                } else {
-                    toast('Todos os recursos e atividades sugeridos deste programa já estão na coluna.', 'sucesso');
-                }
-            }
-            return adicionados;
-        } catch (e) {
-            if (!silencioso) toast('Erro ao auto-preencher: ' + e.message, 'erro');
-            return 0;
-        }
+            salvarRascunho();
+        } catch (_) { /* sugestões são opcionais */ }
     }
 
-    async function autoPreencherNoModal() {
-        if (modal.linha === 'PROGRAMA') {
-            const cols = [...new Set(modal.colunasAlocadas.values())];
-            if (!cols.length) {
-                toast('Marque ao menos um programa para auto-preencher.', 'erro');
-                return;
-            }
-            let totalAdicionados = 0;
-            for (const cIdx of cols) {
-                totalAdicionados += await autoPreencherColuna(cIdx, true);
-            }
-            toast(
-                totalAdicionados > 0
-                    ? `Recursos e atividades sugeridos preenchidos (${totalAdicionados} item(ns))!`
-                    : 'Os recursos e atividades sugeridos já estavam preenchidos.',
-                'sucesso'
-            );
-            return;
+    function adicionarPrograma(diaK, item, preferencia) {
+        const dia = state.dias[diaK];
+        if (dia.programas.some(p => p && p.id === item.id)) return true;
+        let idx = (preferencia != null && !dia.programas[preferencia]) ? preferencia : primeiraLinhaLivre(diaK);
+        if (idx === -1) {
+            toast('Os 20 programas deste dia já estão preenchidos.', 'erro');
+            return false;
         }
-
-        if (ACEITA_VINCULO.has(modal.linha)) {
-            const sugeridos = modal.itens.filter(i => i.sugerido);
-            if (!sugeridos.length) {
-                toast('Nenhum item sugerido vinculado ao programa desta coluna.', 'erro');
-                return;
-            }
-            const c = getCelula(modal.linha, modal.col);
-            const ids = new Set(c.itensSelecionados.map(i => i.id));
-            let novos = 0;
-            sugeridos.forEach(item => {
-                if (!ids.has(item.id)) {
-                    c.itensSelecionados.push(item);
-                    novos++;
-                }
-            });
-            renderLista();
-            alterou(true);
-            toast(novos > 0 ? `${novos} item(ns) sugerido(s) marcado(s)!` : 'Todos os sugeridos já estão marcados.', 'sucesso');
-        }
+        dia.programas[idx] = { id: item.id, titulo: item.titulo };
+        dia.marcados[idx] = false;
+        renderSlot('PROGRAMA', diaK, idx);
+        flash(diaK, idx);
+        salvarRascunho();
+        autoPreencherLinha(diaK, idx);
+        return true;
     }
 
-    function flash(linha, col) {
-        const el = cellEl(linha, col);
+    function removerPrograma(diaK, i) {
+        const dia = state.dias[diaK];
+        if (!dia.programas[i]) return;
+        dia.programas[i] = null;
+        dia.marcados[i] = false;
+        dia.atividades[i] = novaLinha();
+        dia.recursos[i] = novaLinha();
+        renderSlot('PROGRAMA', diaK, i);
+        renderSlot('ATIVIDADE', diaK, i);
+        renderSlot('RECURSO', diaK, i);
+        salvarRascunho();
+    }
+
+    function limparLinha(tipo, diaK, i) {
+        state.dias[diaK][CHAVE_LISTA[tipo]][i] = novaLinha();
+        renderSlot(tipo, diaK, i);
+        salvarRascunho();
+    }
+
+    function flash(diaK, i) {
+        const el = els.grid.querySelector(`.slot-linha[data-abrir="PROGRAMA"][data-dia="${diaK}"][data-i="${i}"]`);
         if (!el) return;
         el.classList.remove('flash');
         void el.offsetWidth;
         el.classList.add('flash');
     }
 
-    // =================================================================== atualização visual da célula (salva rascunho local no navegador)
-
-    function salvarCelula(linha, col) {
-        salvarRascunhoLocal();
-        flash(linha, col);
-        return Promise.resolve();
-    }
-
-    // =================================================================== modal de seleção
+    // =================================================================== modal
 
     const modal = {
-        linha: null,
-        col: null,
+        tipo: null,
+        dia: null,
+        slot: null,
         itens: [],
-        pendente: false,
         seqBusca: 0,
         origem: null,
-        todosProgramas: null,
-        colunasAlocadas: new Map() // itemId -> indiceColuna (usado quando linha === 'PROGRAMA')
+        todosProgramas: null
     };
 
-    const agendarSalvar = debounce(() => {
-        modal.pendente = false;
-        salvarCelula(modal.linha, modal.col);
-    }, 500);
-
-    /** Mudança feita no modal: reflete na grade imediatamente e agenda autosave. */
-    function alterou(imediato) {
-        modal.pendente = true;
-        renderCelula(modal.linha, modal.col);
-        renderSelecionados();
-        if (imediato) {
-            agendarSalvar.cancel();
-            modal.pendente = false;
-            salvarCelula(modal.linha, modal.col);
-        } else {
-            agendarSalvar();
-        }
+    function linhaModal() {
+        return state.dias[modal.dia][CHAVE_LISTA[modal.tipo]][modal.slot];
     }
 
-    async function abrirModal(linha, col, origem) {
-        if (!state.quadro) return;
-        modal.linha = linha;
-        modal.col = col;
-        modal.origem = origem;
+    async function abrirModal(tipo, diaK, i, origem) {
+        modal.tipo = tipo;
+        modal.dia = diaK;
+        modal.slot = i;
+        modal.origem = origem || null;
         modal.itens = [];
-        modal.pendente = false;
-        modal.colunasAlocadas = new Map();
-        if (linha === 'PROGRAMA') {
-            (getCelula('PROGRAMA', col).itensSelecionados || []).forEach(i => modal.colunasAlocadas.set(i.id, col));
+
+        const d = DIA_POR_K[diaK];
+        els.modalHeader.style.background = d.cor;
+        els.modalStatus.textContent = '';
+
+        if (tipo === 'PROGRAMA') {
+            els.modalKicker.textContent = d.nome;
+            els.modalTitulo.textContent = 'Programas do dia';
+            els.tituloSelecionados.textContent = 'Programas selecionados neste dia (até 20)';
+            els.contexto.hidden = true;
+            els.textoWrap.hidden = true;
+            els.qaVinculoWrap.hidden = true;
+        } else {
+            const prog = state.dias[diaK].programas[i];
+            els.modalKicker.textContent = `${d.nome} · Linha ${i + 1}`;
+            els.modalTitulo.textContent = TIPOS[tipo].nome;
+            els.tituloSelecionados.textContent = `Selecionados na linha ${i + 1}`;
+            if (prog) {
+                els.contexto.innerHTML = `<span>Sugestões priorizadas para o programa ${i + 1}:</span><span class="tag">${esc(prog.titulo)}</span>`;
+            } else {
+                els.contexto.innerHTML = `<span class="muted">Dica: adicione o <strong>programa ${i + 1}</strong> deste dia para ver primeiro as ${tipo === 'RECURSO' ? 'opções de recursos' : 'atividades'} vinculadas a ele.</span>`;
+            }
+            els.contexto.hidden = false;
+            els.textoWrap.hidden = false;
+            els.textoLivre.value = linhaModal().texto || '';
+            els.qaVinculoWrap.hidden = false;
+            prepararVinculoQuickAdd(prog);
         }
 
-        const c = getCelula(linha, col);
-        const corColuna = getCelula('PROGRAMA', col).corCabecalho || PALETA[col];
-        pintarCabecalhoModal(corColuna);
-
-        const programas = programasDaColuna(col);
-        const nomesProg = programas.map(p => p.titulo).join(', ');
-        els.modalKicker.textContent = `Coluna ${col + 1}` + (linha !== 'PROGRAMA' && nomesProg ? ` · ${nomesProg}` : '');
-        els.modalTitulo.textContent = LINHAS[linha].nome;
-        els.modalStatus.textContent = '';
-        els.modalStatus.className = 'save-status';
-
-        renderContexto(linha, programas);
-
         els.busca.value = '';
-        els.textoLivre.value = c.textoLivre || '';
         els.quickAdd.open = false;
         els.qaForm.reset();
-
-        els.corWrap.hidden = linha !== 'PROGRAMA';
-        if (linha === 'PROGRAMA') renderSwatches(c.corCabecalho || PALETA[col]);
-
-        els.qaVinculoWrap.hidden = !ACEITA_VINCULO.has(linha);
-        if (ACEITA_VINCULO.has(linha)) prepararVinculoQuickAdd(programas);
-
         renderSelecionados();
         els.lista.innerHTML = '<div class="list-empty">Carregando…</div>';
         els.modal.hidden = false;
@@ -578,73 +456,30 @@
         await buscarItens();
     }
 
-    function pintarCabecalhoModal(cor) {
-        els.modalHeader.style.background = cor;
-        els.modalHeader.classList.toggle('texto-escuro', corClara(cor));
-    }
-
-    function renderContexto(linha, programas) {
-        let html = '';
-        if (linha !== 'PROGRAMA' && programas.length) {
-            html = `<span>Sugestões priorizadas para:</span>` +
-                programas.map(p => `<span class="tag">${esc(p.titulo)}</span>`).join('');
-        } else if (ACEITA_VINCULO.has(linha)) {
-            html = `<span class="muted">Dica: selecione um <strong>programa</strong> no topo desta coluna para ver primeiro os ${LINHAS[linha].singular === 'recurso' ? 'recursos' : 'atividades'} vinculados a ele.</span>`;
-        }
-        if (linha === 'PREFERENCIA' && state.crianca && state.crianca.preferenciasPadrao) {
-            html += `${html ? '<br>' : ''}<span>Preferências registradas de <strong>${esc(state.crianca.nome)}</strong>: ${esc(state.crianca.preferenciasPadrao)}</span>`;
-        }
-        if (linha === 'OBSERVACAO' && state.crianca && state.crianca.observacoesGerais) {
-            html += `${html ? '<br>' : ''}<span>Observações gerais: ${esc(state.crianca.observacoesGerais)}</span>`;
-        }
-        els.contexto.innerHTML = html;
-        els.contexto.hidden = !html;
-    }
-
-    async function prepararVinculoQuickAdd(programasColuna) {
+    async function prepararVinculoQuickAdd(prog) {
         if (!modal.todosProgramas) {
-            try {
-                modal.todosProgramas = await api.get('/api/catalogo?categoria=PROGRAMA');
-            } catch (e) {
-                modal.todosProgramas = [];
-            }
+            try { modal.todosProgramas = await api.get('/api/catalogo?categoria=PROGRAMA'); }
+            catch (_) { modal.todosProgramas = []; }
         }
-        const idsColuna = new Set(programasColuna.map(p => p.id));
-        const padrao = programasColuna[0] ? programasColuna[0].id : '';
+        const padrao = prog ? prog.id : '';
         els.qaPrograma.innerHTML = '<option value="">— Nenhum (item geral) —</option>' +
             modal.todosProgramas.map(p =>
-                `<option value="${p.id}" ${p.id === padrao ? 'selected' : ''}>${esc(p.titulo)}${idsColuna.has(p.id) ? ' (desta coluna)' : ''}</option>`
+                `<option value="${p.id}" ${p.id === padrao ? 'selected' : ''}>${esc(p.titulo)}</option>`
             ).join('');
-    }
-
-    function renderSwatches(corAtual) {
-        const unicas = [...new Set(PALETA.map(c => c.toUpperCase()))];
-        const atual = (corAtual || '').toUpperCase();
-        els.swatches.innerHTML = unicas.map(c =>
-            `<button type="button" class="swatch ${c === atual ? 'ativo' : ''}" data-cor="${c}" style="background:${c}" aria-label="Cor ${c}" title="${c}"></button>`
-        ).join('') +
-            `<input type="color" id="corCustom" value="${/^#[0-9A-F]{6}$/.test(atual) ? atual.toLowerCase() : '#5a28b6'}" title="Outra cor" aria-label="Escolher outra cor">`;
-    }
-
-    function definirCor(cor) {
-        const c = getCelula('PROGRAMA', modal.col);
-        c.corCabecalho = cor.toUpperCase();
-        pintarCabecalhoModal(c.corCabecalho);
-        renderSwatches(c.corCabecalho);
-        alterou(true);
     }
 
     async function buscarItens() {
         const seq = ++modal.seqBusca;
-        const params = new URLSearchParams({ categoria: modal.linha });
+        const params = new URLSearchParams({ categoria: modal.tipo });
         const termo = els.busca.value.trim();
         if (termo) params.set('busca', termo);
-        if (modal.linha !== 'PROGRAMA') {
-            programasDaColuna(modal.col).forEach(p => params.append('programaId', p.id));
+        if (modal.tipo !== 'PROGRAMA') {
+            const prog = state.dias[modal.dia].programas[modal.slot];
+            if (prog && prog.id) params.append('programaId', prog.id);
         }
         try {
             const itens = await api.get('/api/catalogo?' + params.toString());
-            if (seq !== modal.seqBusca) return; // resposta antiga
+            if (seq !== modal.seqBusca) return;
             modal.itens = itens;
             renderLista();
         } catch (e) {
@@ -654,16 +489,21 @@
         }
     }
 
+    function idsSelecionados() {
+        if (modal.tipo === 'PROGRAMA') {
+            return new Set(state.dias[modal.dia].programas.filter(Boolean).map(p => p.id));
+        }
+        return new Set(linhaModal().itens.map(i => i.id));
+    }
+
     function renderLista() {
-        const selecionadosIds = modal.linha === 'PROGRAMA'
-            ? new Set(modal.colunasAlocadas.keys())
-            : new Set(getCelula(modal.linha, modal.col).itensSelecionados.map(i => i.id));
+        const sel = idsSelecionados();
         const sugeridos = modal.itens.filter(i => i.sugerido);
         const outros = modal.itens.filter(i => !i.sugerido);
 
         const row = i => `
             <label class="item-row">
-                <input type="checkbox" data-id="${i.id}" ${selecionadosIds.has(i.id) ? 'checked' : ''}>
+                <input type="checkbox" data-id="${i.id}" ${sel.has(i.id) ? 'checked' : ''}>
                 <div>
                     <div class="item-titulo">${esc(i.titulo)}${i.sugerido ? '<span class="badge-sugerido">sugerido</span>' : ''}</div>
                     ${i.descricao ? `<div class="item-desc">${esc(i.descricao)}</div>` : ''}
@@ -677,10 +517,9 @@
                 Use <strong>+ Cadastrar Novo Item no Banco</strong> abaixo.</div>`;
             return;
         }
-
         let html = '';
         if (sugeridos.length) {
-            html += `<div class="item-group-title sugeridos">★ Vinculados ao programa da coluna (${sugeridos.length})</div>`;
+            html += `<div class="item-group-title sugeridos">★ Vinculados ao programa desta linha (${sugeridos.length})</div>`;
             html += sugeridos.map(row).join('');
         }
         if (outros.length) {
@@ -691,101 +530,50 @@
     }
 
     function renderSelecionados() {
-        if (els.btnAutoPreencherModal) {
-            if (modal.linha === 'PROGRAMA') {
-                els.btnAutoPreencherModal.hidden = modal.colunasAlocadas.size === 0;
-                els.btnAutoPreencherModal.textContent = '⚡ Auto-preencher recursos e atividades sugeridos';
-            } else if (ACEITA_VINCULO.has(modal.linha)) {
-                const temProg = programasDaColuna(modal.col).length > 0;
-                els.btnAutoPreencherModal.hidden = !temProg;
-                els.btnAutoPreencherModal.textContent = '⚡ Marcar todos os sugeridos';
-            } else {
-                els.btnAutoPreencherModal.hidden = true;
-            }
-        }
-        if (modal.linha === 'PROGRAMA') {
-            if (!modal.colunasAlocadas.size) {
-                els.selecionados.innerHTML = '<span class="vazio">Nenhum programa selecionado (cada opção marcada abrirá em uma coluna individual).</span>';
-                return;
-            }
-            const chips = [];
-            for (const [itemId, colIdx] of modal.colunasAlocadas.entries()) {
-                const cel = getCelula('PROGRAMA', colIdx);
-                const item = (cel.itensSelecionados || []).find(i => i.id === itemId)
-                    || modal.itens.find(i => i.id === itemId);
-                if (!item) continue;
-                const cor = cel.corCabecalho || PALETA[colIdx];
-                const estilo = `style="background:${cor};color:${corClara(cor) ? '#1C1A3A' : '#fff'}"`;
-                chips.push(`<span class="tag" ${estilo}>Coluna ${colIdx + 1}: ${esc(item.titulo)}
-                    <button type="button" data-remover="${item.id}" aria-label="Remover ${esc(item.titulo)}">&times;</button></span>`);
-            }
-            els.selecionados.innerHTML = chips.join('');
+        if (modal.tipo === 'PROGRAMA') {
+            const progs = state.dias[modal.dia].programas
+                .map((p, idx) => p ? { ...p, idx } : null)
+                .filter(Boolean);
+            els.selecionados.innerHTML = progs.length
+                ? progs.map(p => `<span class="tag">${p.idx + 1}. ${esc(p.titulo)}
+                    <button type="button" data-remover-sel="${p.id}" aria-label="Remover ${esc(p.titulo)}">&times;</button></span>`).join('')
+                : '<span class="vazio">Nenhum programa selecionado. Marque abaixo — cada programa ocupa uma linha numerada (1 a 20).</span>';
             return;
         }
-
-        const c = getCelula(modal.linha, modal.col);
-        const itens = c.itensSelecionados;
-        if (!itens.length) {
-            els.selecionados.innerHTML = '<span class="vazio">Nenhum item selecionado.</span>';
-            return;
-        }
-        els.selecionados.innerHTML = itens.map(i => {
-            return `<span class="tag">${esc(i.titulo)}
-                <button type="button" data-remover="${i.id}" aria-label="Remover ${esc(i.titulo)}">&times;</button></span>`;
-        }).join('');
-    }
-
-    function alocarProgramaEmColunaIndividual(item) {
-        if (!item || modal.colunasAlocadas.has(item.id)) return true;
-        let alvoCol = !colunaTemPrograma(modal.col) ? modal.col : proximaColunaLivre();
-        if (alvoCol === -1) {
-            toast('Todas as 11 colunas de programas já estão preenchidas.', 'erro');
-            return false;
-        }
-        const cel = getCelula('PROGRAMA', alvoCol);
-        cel.itensSelecionados = [item];
-        modal.colunasAlocadas.set(item.id, alvoCol);
-        renderCelula('PROGRAMA', alvoCol);
-        atualizarColunasVisiveis();
-        renderSelecionados();
-        salvarCelula('PROGRAMA', alvoCol);
-        return true;
+        const itens = linhaModal().itens;
+        els.selecionados.innerHTML = itens.length
+            ? itens.map(i => `<span class="tag">${esc(i.titulo)}
+                <button type="button" data-remover-sel="${i.id}" aria-label="Remover ${esc(i.titulo)}">&times;</button></span>`).join('')
+            : '<span class="vazio">Nenhum item selecionado.</span>';
     }
 
     function alternarItem(id, marcado) {
-        if (modal.linha === 'PROGRAMA') {
+        const item = modal.itens.find(i => i.id === id);
+        if (modal.tipo === 'PROGRAMA') {
             if (marcado) {
-                const item = modal.itens.find(i => i.id === id);
-                if (!alocarProgramaEmColunaIndividual(item)) {
+                if (!item) return;
+                const ok = adicionarPrograma(modal.dia, item, modal.slot);
+                modal.slot = null;
+                if (!ok) {
                     const cb = els.lista.querySelector(`input[data-id="${id}"]`);
                     if (cb) cb.checked = false;
                 }
             } else {
-                const colIdx = modal.colunasAlocadas.get(id);
-                if (colIdx !== undefined) {
-                    const cel = getCelula('PROGRAMA', colIdx);
-                    cel.itensSelecionados = (cel.itensSelecionados || []).filter(i => i.id !== id);
-                    modal.colunasAlocadas.delete(id);
-                    if (colIdx === modal.col && modal.colunasAlocadas.size > 0) {
-                        modal.col = modal.colunasAlocadas.values().next().value;
-                    }
-                    renderCelula('PROGRAMA', colIdx);
-                    atualizarColunasVisiveis();
-                    renderSelecionados();
-                    salvarCelula('PROGRAMA', colIdx);
-                }
+                const idx = state.dias[modal.dia].programas.findIndex(p => p && p.id === id);
+                if (idx !== -1) removerPrograma(modal.dia, idx);
             }
+            renderSelecionados();
             return;
         }
-
-        const c = getCelula(modal.linha, modal.col);
+        const linha = linhaModal();
         if (marcado) {
-            const item = modal.itens.find(i => i.id === id);
-            if (item && !c.itensSelecionados.some(i => i.id === id)) c.itensSelecionados.push(item);
+            if (item && !linha.itens.some(i => i.id === id)) linha.itens.push({ id: item.id, titulo: item.titulo });
         } else {
-            c.itensSelecionados = c.itensSelecionados.filter(i => i.id !== id);
+            linha.itens = linha.itens.filter(i => i.id !== id);
         }
-        alterou(false);
+        renderSlot(modal.tipo, modal.dia, modal.slot);
+        renderSelecionados();
+        salvarRascunho();
     }
 
     async function cadastroRapido(ev) {
@@ -796,19 +584,21 @@
         btn.disabled = true;
         try {
             const novo = await api.post('/api/catalogo', {
-                categoria: modal.linha,
+                categoria: modal.tipo,
                 titulo,
                 descricao: els.qaDescricao.value.trim() || null,
-                programaVinculadoId: ACEITA_VINCULO.has(modal.linha) && els.qaPrograma.value ? Number(els.qaPrograma.value) : null
+                programaVinculadoId: modal.tipo !== 'PROGRAMA' && els.qaPrograma.value ? Number(els.qaPrograma.value) : null
             });
-            if (modal.linha === 'PROGRAMA') {
+            if (modal.tipo === 'PROGRAMA') {
                 modal.todosProgramas = null;
-                alocarProgramaEmColunaIndividual(novo);
+                adicionarPrograma(modal.dia, novo, modal.slot);
+                modal.slot = null;
             } else {
-                const c = getCelula(modal.linha, modal.col);
-                c.itensSelecionados.push(novo);
-                alterou(true);
+                linhaModal().itens.push({ id: novo.id, titulo: novo.titulo });
+                renderSlot(modal.tipo, modal.dia, modal.slot);
+                salvarRascunho();
             }
+            renderSelecionados();
             els.qaForm.reset();
             els.quickAdd.open = false;
             toast(`“${novo.titulo}” cadastrado no banco e adicionado ao quadro.`, 'sucesso');
@@ -820,85 +610,69 @@
         }
     }
 
-    function limparCelula() {
-        if (modal.linha === 'PROGRAMA') {
-            const cols = new Set([modal.col, ...modal.colunasAlocadas.values()]);
-            cols.forEach(colIdx => {
-                const cel = getCelula('PROGRAMA', colIdx);
-                if ((cel.itensSelecionados && cel.itensSelecionados.length) || cel.textoLivre) {
-                    cel.itensSelecionados = [];
-                    cel.textoLivre = null;
-                    renderCelula('PROGRAMA', colIdx);
-                    salvarCelula('PROGRAMA', colIdx);
-                }
-            });
-            modal.colunasAlocadas.clear();
-            els.textoLivre.value = '';
-            fecharModal();
+    function limparNoModal() {
+        if (modal.tipo === 'PROGRAMA') {
+            const dia = state.dias[modal.dia];
+            if (!dia.programas.some(Boolean)) return;
+            if (!window.confirm(`Remover todos os programas de ${DIA_POR_K[modal.dia].nome}?`)) return;
+            for (let i = 0; i < N; i++) if (dia.programas[i]) removerPrograma(modal.dia, i);
+            renderSelecionados();
+            renderLista();
             return;
         }
-        const c = getCelula(modal.linha, modal.col);
-        if (!c.itensSelecionados.length && !c.textoLivre) return;
-        c.itensSelecionados = [];
-        c.textoLivre = null;
+        limparLinha(modal.tipo, modal.dia, modal.slot);
         els.textoLivre.value = '';
-        alterou(true);
+        renderSelecionados();
         renderLista();
     }
 
     function fecharModal() {
         if (els.modal.hidden) return;
-        if (modal.pendente) {
-            agendarSalvar.cancel();
-            modal.pendente = false;
-            salvarCelula(modal.linha, modal.col);
-        }
         els.modal.hidden = true;
         document.body.style.overflow = '';
-        atualizarColunasVisiveis();
-        if (modal.origem && !modal.origem.hidden) modal.origem.focus();
+        salvarRascunho();
+        if (modal.origem && document.body.contains(modal.origem)) modal.origem.focus();
     }
 
     // =================================================================== eventos
 
     els.grid.addEventListener('click', ev => {
-        const btnMover = ev.target.closest('[data-mover-coluna]');
-        if (btnMover) {
+        const btnRem = ev.target.closest('[data-remover]');
+        if (btnRem) {
             ev.stopPropagation();
-            if (!btnMover.disabled) {
-                moverColuna(Number(btnMover.dataset.moverColuna), Number(btnMover.dataset.moverDir));
-            }
+            const [tipo, diaK, i] = btnRem.dataset.remover.split(':');
+            if (tipo === 'PROGRAMA') removerPrograma(diaK, Number(i));
+            else limparLinha(tipo, diaK, Number(i));
             return;
         }
-        const btnAuto = ev.target.closest('[data-autopreencher-coluna]');
-        if (btnAuto) {
-            ev.stopPropagation();
-            autoPreencherColuna(Number(btnAuto.dataset.autopreencherColuna), false);
-            return;
+        const alvo = ev.target.closest('[data-abrir]');
+        if (alvo) {
+            abrirModal(alvo.dataset.abrir, alvo.dataset.dia, Number(alvo.dataset.i), alvo);
         }
-        const btnCol = ev.target.closest('[data-remover-coluna]');
-        if (btnCol) {
-            ev.stopPropagation();
-            excluirColuna(Number(btnCol.dataset.removerColuna));
-            return;
-        }
-        const btnChip = ev.target.closest('[data-remover-chip]');
-        if (btnChip) {
-            ev.stopPropagation();
-            const cell = btnChip.closest('.cell');
-            if (cell) {
-                removerChipDireto(cell.dataset.linha, Number(cell.dataset.col), Number(btnChip.dataset.removerChip));
-            }
-            return;
-        }
-        const cell = ev.target.closest('.cell');
-        if (cell) abrirModal(cell.dataset.linha, Number(cell.dataset.col), cell);
     });
+
     els.grid.addEventListener('keydown', ev => {
-        const cell = ev.target.closest('.cell');
-        if (cell && (ev.key === 'Enter' || ev.key === ' ')) {
+        const alvo = ev.target.closest('[data-abrir]');
+        if (alvo && (ev.key === 'Enter' || ev.key === ' ')) {
             ev.preventDefault();
-            abrirModal(cell.dataset.linha, Number(cell.dataset.col), cell);
+            abrirModal(alvo.dataset.abrir, alvo.dataset.dia, Number(alvo.dataset.i), alvo);
+        }
+    });
+
+    els.grid.addEventListener('change', ev => {
+        const cb = ev.target.closest('[data-check]');
+        if (cb) {
+            const [diaK, i] = cb.dataset.check.split(':');
+            state.dias[diaK].marcados[Number(i)] = cb.checked;
+            salvarRascunho();
+        }
+    });
+
+    els.grid.addEventListener('input', ev => {
+        const ta = ev.target.closest('[data-obs]');
+        if (ta) {
+            state.dias[ta.dataset.obs].observacoes = ta.value;
+            salvarRascunho();
         }
     });
 
@@ -924,91 +698,63 @@
     });
 
     els.selecionados.addEventListener('click', ev => {
-        const btn = ev.target.closest('[data-remover]');
+        const btn = ev.target.closest('[data-remover-sel]');
         if (!btn) return;
-        const id = Number(btn.dataset.remover);
+        const id = Number(btn.dataset.removerSel);
         const cb = els.lista.querySelector(`input[data-id="${id}"]`);
         if (cb) cb.checked = false;
         alternarItem(id, false);
     });
 
     els.textoLivre.addEventListener('input', () => {
-        getCelula(modal.linha, modal.col).textoLivre = els.textoLivre.value;
-        alterou(false);
-    });
-
-    els.swatches.addEventListener('click', ev => {
-        const sw = ev.target.closest('[data-cor]');
-        if (sw) definirCor(sw.dataset.cor);
-    });
-    els.swatches.addEventListener('change', ev => {
-        if (ev.target.id === 'corCustom') definirCor(ev.target.value);
+        if (modal.tipo === 'PROGRAMA' || modal.dia == null) return;
+        linhaModal().texto = els.textoLivre.value;
+        renderSlot(modal.tipo, modal.dia, modal.slot);
+        salvarRascunho();
     });
 
     els.qaForm.addEventListener('submit', cadastroRapido);
-    els.btnLimpar.addEventListener('click', limparCelula);
+    els.btnLimpar.addEventListener('click', limparNoModal);
 
+    // Política de linguagem: limpa também os complementos livres guardados no quadro
     document.addEventListener('pei:limpar-ofensas', () => {
         if (!window.PEI.removerOfensasTexto) return;
         let mudou = false;
-        state.celulas.forEach(c => {
-            if (c.textoLivre) {
-                const limpo = window.PEI.removerOfensasTexto(c.textoLivre);
-                if (limpo !== c.textoLivre) {
-                    c.textoLivre = limpo || null;
-                    renderCelula(c.tipoLinha, c.indiceColuna);
-                    mudou = true;
-                }
-            }
+        DIAS.forEach(d => {
+            const dia = state.dias[d.k];
+            ['atividades', 'recursos'].forEach(chaveLista => {
+                dia[chaveLista].forEach(linha => {
+                    if (linha.texto) {
+                        const limpo = window.PEI.removerOfensasTexto(linha.texto);
+                        if (limpo !== linha.texto) { linha.texto = limpo; mudou = true; }
+                    }
+                });
+            });
         });
         if (mudou) {
-            salvarRascunhoLocal();
-            atualizarColunasVisiveis();
-            window.PEI.toast('Palavra(s) imprópria(s) retirada(s) do quadro.', 'sucesso');
+            renderTudo();
+            toast('Palavra(s) imprópria(s) retirada(s) do quadro.', 'sucesso');
         }
     });
 
-    if (els.inputCrianca) {
-        els.inputCrianca.addEventListener('input', atualizarTextoPeriodoPrint);
-        els.inputCrianca.addEventListener('change', atualizarTextoPeriodoPrint);
-    }
-    if (els.inputAt) {
-        els.inputAt.addEventListener('input', atualizarTextoPeriodoPrint);
-        els.inputAt.addEventListener('change', atualizarTextoPeriodoPrint);
-    }
-    if (els.btnLimparQuadro) {
-        els.btnLimparQuadro.addEventListener('click', () => limparQuadroTodo(false));
-    }
-    if (els.btnAutoPreencherModal) els.btnAutoPreencherModal.addEventListener('click', autoPreencherNoModal);
-    if (els.btnAddPrograma) els.btnAddPrograma.addEventListener('click', adicionarPrograma);
-    if (els.btnPrimeiroPrograma) els.btnPrimeiroPrograma.addEventListener('click', adicionarPrograma);
+    [els.inputCrianca, els.inputAt, els.inputSemana].forEach(inp => {
+        if (!inp) return;
+        inp.addEventListener('input', atualizarCabecalho);
+        inp.addEventListener('change', atualizarCabecalho);
+    });
+
+    if (els.btnLimparQuadro) els.btnLimparQuadro.addEventListener('click', () => limparQuadroTodo(false));
+
     els.btnImprimir.addEventListener('click', () => {
-        if (window.PEI.validarSemOfensasAntesDeAcao && !window.PEI.validarSemOfensasAntesDeAcao()) {
-            return;
-        }
-        atualizarTextoPeriodoPrint();
+        if (window.PEI.validarSemOfensasAntesDeAcao && !window.PEI.validarSemOfensasAntesDeAcao()) return;
+        atualizarCabecalho();
         window.print();
     });
-    els.titulo.addEventListener('input', atualizarTextoPeriodoPrint);
-    els.titulo.addEventListener('change', atualizarTextoPeriodoPrint);
-    els.titulo.addEventListener('keydown', ev => { if (ev.key === 'Enter') els.titulo.blur(); });
-    if (els.dataInicio) {
-        els.dataInicio.addEventListener('input', atualizarTextoPeriodoPrint);
-        els.dataInicio.addEventListener('change', atualizarTextoPeriodoPrint);
-    }
 
     // =================================================================== inicialização
 
-    function inicializar() {
-        const emptyEl = document.getElementById('emptyState');
-        const mainEl = document.getElementById('sheetMain');
-        if (emptyEl) emptyEl.hidden = true;
-        if (mainEl) mainEl.hidden = false;
-        if (!restaurarRascunhoLocal()) {
-            limparQuadroTodo(true);
-        }
+    montarGrade();
+    if (!restaurarRascunho()) {
+        limparQuadroTodo(true);
     }
-
-    inicializar();
 })();
-
