@@ -46,7 +46,7 @@ public class DataInitializer implements CommandLineRunner {
         this.quadroRepository = quadroRepository;
     }
 
-    @Value("${pei.seed.enabled:true}")
+    @Value("${pei.seed.enabled:false}")
     private boolean seedHabilitado;
 
     /** Índice local por título para montar os vínculos e o quadro de exemplo. */

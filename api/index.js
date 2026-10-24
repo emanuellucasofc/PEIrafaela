@@ -165,237 +165,29 @@ async function ensureInitialized() {
                 ordem INTEGER NOT NULL,
                 PRIMARY KEY (celula_id, ordem)
             );
+            CREATE TABLE IF NOT EXISTS pei_migrations (
+                chave VARCHAR(100) PRIMARY KEY,
+                executado_em TIMESTAMP DEFAULT NOW()
+            );
         `);
 
-        const { rows } = await db.query('SELECT COUNT(*)::int AS total FROM criancas');
-        if (rows[0].total === 0) {
-            await seedDatabase(db);
+        const { rows: migRows } = await db.query(
+            `SELECT 1 FROM pei_migrations WHERE chave = 'reset_banco_zerado_v1'`
+        );
+        if (migRows.length === 0) {
+            await db.query(`
+                TRUNCATE TABLE celula_itens, celulas_pei, quadros_pei, itens_catalogo, criancas
+                RESTART IDENTITY CASCADE;
+            `);
+            await db.query(
+                `INSERT INTO pei_migrations (chave) VALUES ('reset_banco_zerado_v1') ON CONFLICT (chave) DO NOTHING`
+            );
         }
-        await ensureProgramasAdicionais(db);
     })().catch(err => {
         initPromise = null;
         throw err;
     });
     return initPromise;
-}
-
-const PROGRAMAS_PADRAO_EXTRAS = [
-    'Atenção conjunta prolongada',
-    'Imitar vocalizações e sons onomatopaicos',
-    'Atendimento a ordens simples de 1 passo',
-    'Contato visual sob solicitação verbal',
-    'Expansão de vocabulário na pasta PECS (ações e sentimentos)',
-    'Indicação de necessidades básicas (água, banheiro, pausa)',
-    'Brincadeira de faz de conta funcional (cuidar de boneco, boneca ou atender telefone)',
-    'Imitação social e de expressões faciais no espelho',
-    'Compartilhamento espontâneo de atenção (apontar para mostrar algo)',
-    'Tolerância à frustração e respeito ao turno (esperar a vez)',
-    'Reconhecimento de emoções básicas em figuras ou rostos',
-    'Enfiamento de contas grossas em cordão',
-    'Rasgar e amassar papéis de texturas variadas',
-    'Uso seguro de tesoura adaptada (cortes retos)',
-    'Traçado de linhas retas e labirintos grossos',
-    'Equilíbrio dinâmico (caminhar sobre linha no chão)',
-    'Pareamento de cores e formas geométricas',
-    'Classificação de objetos por tamanho (grande e pequeno)',
-    'Quebra-cabeças de encaixe simples (2 a 4 peças)',
-    'Brinquedos de causa e efeito (apertar botão para acionar luz/som)'
-];
-
-async function ensureProgramasAdicionais(db) {
-    const { rows } = await db.query(
-        `SELECT LOWER(titulo) AS t FROM itens_catalogo WHERE categoria = 'PROGRAMA'`
-    );
-    const existentes = new Set(rows.map(r => r.t));
-    for (const titulo of PROGRAMAS_PADRAO_EXTRAS) {
-        if (!existentes.has(titulo.toLowerCase())) {
-            await db.query(
-                `INSERT INTO itens_catalogo (categoria, titulo, descricao, programa_vinculado_id)
-                 VALUES ('PROGRAMA', $1, NULL, NULL)`,
-                [titulo]
-            );
-            existentes.add(titulo.toLowerCase());
-        }
-    }
-}
-
-async function seedDatabase(db) {
-    const client = await db.connect();
-    try {
-        await client.query('BEGIN');
-        const check = await client.query('SELECT COUNT(*)::int AS total FROM criancas');
-        if (check.rows[0].total > 0) {
-            await client.query('COMMIT');
-            return;
-        }
-
-        const anaRes = await client.query(
-            `INSERT INTO criancas (nome, data_nascimento, preferencias_padrao, observacoes_gerais)
-             VALUES ($1, $2, $3, $4) RETURNING id`,
-            [
-                'Ana Clara Souza',
-                '2020-03-14',
-                'Bolhas de sabão, músicas infantis, massinha colorida',
-                'Responde bem a reforço social. Evitar ambientes muito ruidosos.'
-            ]
-        );
-        const anaId = Number(anaRes.rows[0].id);
-
-        await client.query(
-            `INSERT INTO criancas (nome, data_nascimento, preferencias_padrao, observacoes_gerais)
-             VALUES ($1, $2, $3, $4)`,
-            [
-                'Pedro Henrique Lima',
-                '2019-09-02',
-                'Carrinhos, dinossauros, brinquedos luminosos',
-                'Utiliza prancha de comunicação alternativa. Necessita de rotina visual.'
-            ]
-        );
-
-        const porTitulo = new Map();
-        const addItem = async (categoria, titulo, descricao, programaTitulo) => {
-            const progId = programaTitulo ? porTitulo.get(programaTitulo) || null : null;
-            const res = await client.query(
-                `INSERT INTO itens_catalogo (categoria, titulo, descricao, programa_vinculado_id)
-                 VALUES ($1, $2, $3, $4) RETURNING id`,
-                [categoria, titulo, descricao, progId]
-            );
-            const id = Number(res.rows[0].id);
-            porTitulo.set(titulo, id);
-            return id;
-        };
-
-        // Programas
-        await addItem('PROGRAMA', 'Imitação Motora', 'Imitar ações motoras amplas e finas a partir de um modelo.', null);
-        await addItem('PROGRAMA', 'Pareamento Visual', 'Associar itens idênticos ou semelhantes (cores, formas, figuras).', null);
-        await addItem('PROGRAMA', 'Comunicação Funcional (PECS)', 'Sistema de comunicação por troca de figuras.', null);
-        await addItem('PROGRAMA', 'Atenção Compartilhada', 'Compartilhar o foco de atenção com o terapeuta sobre um objeto/evento.', null);
-        await addItem('PROGRAMA', 'Coordenação Motora Fina', 'Desenvolver preensão, pinça e manipulação de pequenos objetos.', null);
-        await addItem('PROGRAMA', 'Habilidades Sociais e Brincar', 'Troca de turnos, brincar funcional e simbólico.', null);
-
-        // Recursos
-        await addItem('RECURSO', 'Espelho grande', 'Para imitação de expressões e gestos.', 'Imitação Motora');
-        await addItem('RECURSO', 'Fantoches', null, 'Imitação Motora');
-        await addItem('RECURSO', 'Instrumentos musicais (chocalho, tambor)', null, 'Imitação Motora');
-        await addItem('RECURSO', 'Cartões plastificados', 'Figuras plastificadas de cores, objetos e animais.', 'Pareamento Visual');
-        await addItem('RECURSO', 'Quebra-cabeça 6 peças', null, 'Pareamento Visual');
-        await addItem('RECURSO', 'Formas geométricas de encaixe', null, 'Pareamento Visual');
-        await addItem('RECURSO', 'Pasta de comunicação PECS', null, 'Comunicação Funcional (PECS)');
-        await addItem('RECURSO', 'Figuras de reforçadores', 'Fotos dos itens preferidos da criança.', 'Comunicação Funcional (PECS)');
-        await addItem('RECURSO', 'Tablet com prancha de CAA', 'Comunicação Aumentativa e Alternativa.', 'Comunicação Funcional (PECS)');
-        await addItem('RECURSO', 'Pião luminoso', null, 'Atenção Compartilhada');
-        await addItem('RECURSO', 'Livro sensorial', null, 'Atenção Compartilhada');
-        await addItem('RECURSO', 'Massinha de modelar', null, 'Coordenação Motora Fina');
-        await addItem('RECURSO', 'Blocos de montar', null, 'Coordenação Motora Fina');
-        await addItem('RECURSO', 'Pinça e pompons', null, 'Coordenação Motora Fina');
-        await addItem('RECURSO', 'Bola macia', null, 'Habilidades Sociais e Brincar');
-        await addItem('RECURSO', 'Kit de comidinha (brinquedo)', null, 'Habilidades Sociais e Brincar');
-        await addItem('RECURSO', 'Cronômetro visual', 'Apoio para tempo de espera e transições.', null);
-        await addItem('RECURSO', 'Quadro de rotina visual', null, null);
-
-        // Atividades
-        await addItem('ATIVIDADE', 'Imitar movimentos amplos (bater palmas, levantar braços)', null, 'Imitação Motora');
-        await addItem('ATIVIDADE', 'Imitação com objetos', null, 'Imitação Motora');
-        await addItem('ATIVIDADE', 'Cantar músicas com gestos', null, 'Imitação Motora');
-        await addItem('ATIVIDADE', 'Parear cores primárias', null, 'Pareamento Visual');
-        await addItem('ATIVIDADE', 'Parear figura com figura idêntica', null, 'Pareamento Visual');
-        await addItem('ATIVIDADE', 'Montar quebra-cabeça com apoio', null, 'Pareamento Visual');
-        await addItem('ATIVIDADE', 'Troca de figura por item desejado (Fase I)', null, 'Comunicação Funcional (PECS)');
-        await addItem('ATIVIDADE', 'Nomeação de figuras', null, 'Comunicação Funcional (PECS)');
-        await addItem('ATIVIDADE', 'Construir frase "Eu quero ..."', null, 'Comunicação Funcional (PECS)');
-        await addItem('ATIVIDADE', 'Seguir o apontar do terapeuta', null, 'Atenção Compartilhada');
-        await addItem('ATIVIDADE', 'Brincadeira "cadê? achou!"', null, 'Atenção Compartilhada');
-        await addItem('ATIVIDADE', 'Modelar formas com massinha', null, 'Coordenação Motora Fina');
-        await addItem('ATIVIDADE', 'Empilhar blocos (torre de 6)', null, 'Coordenação Motora Fina');
-        await addItem('ATIVIDADE', 'Transferir pompons com pinça', null, 'Coordenação Motora Fina');
-        await addItem('ATIVIDADE', 'Troca de turno com bola', null, 'Habilidades Sociais e Brincar');
-        await addItem('ATIVIDADE', 'Jogo simbólico de comidinha', null, 'Habilidades Sociais e Brincar');
-
-        // Preferências
-        for (const t of [
-            'Bolhas de sabão', 'Músicas infantis', 'Carrinhos', 'Desenhos no tablet',
-            'Massinha colorida', 'Balanço / movimento', 'Brinquedos luminosos', 'Dinossauros'
-        ]) {
-            await addItem('PREFERENCIA', t, null, null);
-        }
-
-        // Observações
-        for (const t of [
-            'Boa regulação emocional', 'Necessitou de dica física parcial',
-            'Necessitou de dica física total', 'Respondeu bem à dica verbal',
-            'Realizou de forma independente', 'Baixa tolerância à espera',
-            'Engajamento elevado na atividade', 'Sinais de cansaço ao final da sessão'
-        ]) {
-            await addItem('OBSERVACAO', t, null, null);
-        }
-
-        // Quadro de exemplo para Ana Clara
-        const hoje = new Date().toISOString().slice(0, 10);
-        const qRes = await client.query(
-            `INSERT INTO quadros_pei (titulo, crianca_id, data_criacao) VALUES ($1, $2, $3) RETURNING id`,
-            ['Planejamento dos Atendimentos - Exemplo', anaId, hoje]
-        );
-        const quadroId = Number(qRes.rows[0].id);
-
-        const celulaMap = new Map();
-        for (const cat of CATEGORIAS) {
-            for (let col = 0; col < TOTAL_COLUNAS; col++) {
-                const cRes = await client.query(
-                    `INSERT INTO celulas_pei (quadro_id, indice_coluna, tipo_linha, cor_cabecalho)
-                     VALUES ($1, $2, $3, $4) RETURNING id`,
-                    [quadroId, col, cat.valor, PALETA_COLUNAS[col]]
-                );
-                celulaMap.set(`${cat.valor}:${col}`, Number(cRes.rows[0].id));
-            }
-        }
-
-        const preencher = async (col, linha, textoLivre, titulos) => {
-            const celId = celulaMap.get(`${linha}:${col}`);
-            if (textoLivre) {
-                await client.query(`UPDATE celulas_pei SET texto_livre = $1 WHERE id = $2`, [textoLivre, celId]);
-            }
-            for (let idx = 0; idx < titulos.length; idx++) {
-                const itemId = porTitulo.get(titulos[idx]);
-                if (itemId) {
-                    await client.query(
-                        `INSERT INTO celula_itens (celula_id, item_id, ordem) VALUES ($1, $2, $3)`,
-                        [celId, itemId, idx]
-                    );
-                }
-            }
-        };
-
-        await preencher(0, 'PROGRAMA', null, ['Imitação Motora']);
-        await preencher(0, 'RECURSO', null, ['Espelho grande', 'Fantoches']);
-        await preencher(0, 'ATIVIDADE', 'Iniciar com 3 tentativas por bloco.', [
-            'Imitar movimentos amplos (bater palmas, levantar braços)',
-            'Cantar músicas com gestos'
-        ]);
-        await preencher(0, 'PREFERENCIA', null, ['Músicas infantis']);
-        await preencher(0, 'OBSERVACAO', null, ['Boa regulação emocional']);
-
-        await preencher(1, 'PROGRAMA', null, ['Pareamento Visual']);
-        await preencher(1, 'RECURSO', null, ['Cartões plastificados', 'Quebra-cabeça 6 peças']);
-        await preencher(1, 'ATIVIDADE', null, ['Parear cores primárias']);
-        await preencher(1, 'PREFERENCIA', null, ['Bolhas de sabão']);
-        await preencher(1, 'OBSERVACAO', null, ['Necessitou de dica física parcial']);
-
-        await preencher(2, 'PROGRAMA', null, ['Comunicação Funcional (PECS)']);
-        await preencher(2, 'RECURSO', null, ['Pasta de comunicação PECS', 'Figuras de reforçadores']);
-        await preencher(2, 'ATIVIDADE', null, ['Troca de figura por item desejado (Fase I)', 'Nomeação de figuras']);
-        await preencher(2, 'PREFERENCIA', null, ['Massinha colorida']);
-
-        await preencher(3, 'PROGRAMA', null, ['Atenção Compartilhada']);
-        await preencher(3, 'RECURSO', null, ['Pião luminoso']);
-        await preencher(3, 'ATIVIDADE', null, ['Seguir o apontar do terapeuta']);
-
-        await client.query('COMMIT');
-    } catch (e) {
-        await client.query('ROLLBACK');
-        throw e;
-    } finally {
-        client.release();
-    }
 }
 
 // --------------------------------------------------------------------- Helpers HTTP / DTO

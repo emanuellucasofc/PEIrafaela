@@ -12,7 +12,7 @@
     const { api, toast, esc, debounce, formatarData } = window.PEI;
 
     const N = 20;
-    const STORAGE_KEY = 'pei_rascunho_semana_v1';
+    const STORAGE_KEY = 'pei_rascunho_semana_v2';
 
     const DIAS = [
         { k: 'SEG', nome: 'Segunda-feira', css: 'dia-seg', cor: '#F7C6D6' },
