@@ -257,7 +257,7 @@
         const partes = [];
         partes.push(`Criança: <strong>${crianca ? esc(crianca) : '—'}</strong>`);
         partes.push(`AT: <strong>${at ? esc(at) : '—'}</strong>`);
-        partes.push(`Supervisão: <strong>${supervisao ? esc(supervisao) : '—'}</strong>`);
+        partes.push(`Supervisora: <strong>${supervisao ? esc(supervisao) : '—'}</strong>`);
         if (datas) {
             partes.push(`Semana: <strong>${esc(formatarData(datas[0]))} a ${esc(formatarData(datas[4]))}</strong>`);
         }
