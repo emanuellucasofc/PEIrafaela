@@ -44,6 +44,7 @@
         meta: $('semanaMeta'),
         inputCrianca: $('inputCrianca'),
         inputAt: $('inputAt'),
+        inputSupervisao: $('inputSupervisao'),
         inputSemana: $('inputSemana'),
         btnLimparQuadro: $('btnLimparQuadro'),
         btnImprimir: $('btnImprimir'),
@@ -245,6 +246,7 @@
     function atualizarCabecalho() {
         const crianca = els.inputCrianca && els.inputCrianca.value.trim();
         const at = els.inputAt && els.inputAt.value.trim();
+        const supervisao = els.inputSupervisao && els.inputSupervisao.value.trim();
         const datas = datasDaSemana();
 
         DIAS.forEach((d, idx) => {
@@ -255,6 +257,7 @@
         const partes = [];
         partes.push(`Criança: <strong>${crianca ? esc(crianca) : '—'}</strong>`);
         partes.push(`AT: <strong>${at ? esc(at) : '—'}</strong>`);
+        partes.push(`Supervisão: <strong>${supervisao ? esc(supervisao) : '—'}</strong>`);
         if (datas) {
             partes.push(`Semana: <strong>${esc(formatarData(datas[0]))} a ${esc(formatarData(datas[4]))}</strong>`);
         }
@@ -269,6 +272,7 @@
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 crianca: els.inputCrianca ? els.inputCrianca.value : '',
                 at: els.inputAt ? els.inputAt.value : '',
+                supervisao: els.inputSupervisao ? els.inputSupervisao.value : '',
                 semana: els.inputSemana ? els.inputSemana.value : '',
                 dias: state.dias
             }));
@@ -303,6 +307,7 @@
             });
             if (els.inputCrianca) els.inputCrianca.value = r.crianca || '';
             if (els.inputAt) els.inputAt.value = r.at || '';
+            if (els.inputSupervisao) els.inputSupervisao.value = r.supervisao || '';
             if (els.inputSemana) els.inputSemana.value = r.semana || '';
             renderTudo();
             return true;
@@ -317,7 +322,8 @@
             return dia.programas.some(Boolean) || dia.atividades.some(linhaTemConteudo)
                 || dia.recursos.some(linhaTemConteudo) || (dia.observacoes || '').trim();
         }) || Boolean(els.inputCrianca && els.inputCrianca.value.trim())
-          || Boolean(els.inputAt && els.inputAt.value.trim());
+          || Boolean(els.inputAt && els.inputAt.value.trim())
+          || Boolean(els.inputSupervisao && els.inputSupervisao.value.trim());
 
         if (!silencioso && temConteudo && !window.confirm('Deseja limpar todo o quadro e começar um novo planejamento?')) {
             return;
@@ -325,6 +331,7 @@
         resetarDias();
         if (els.inputCrianca) els.inputCrianca.value = '';
         if (els.inputAt) els.inputAt.value = '';
+        if (els.inputSupervisao) els.inputSupervisao.value = '';
         if (els.inputSemana) els.inputSemana.value = '';
         try { window.localStorage.removeItem(STORAGE_KEY); } catch (_) { /* ignora */ }
         if (!silencioso && window.PEI.restaurarItensSessao) window.PEI.restaurarItensSessao();
@@ -774,7 +781,7 @@
         }
     });
 
-    [els.inputCrianca, els.inputAt, els.inputSemana].forEach(inp => {
+    [els.inputCrianca, els.inputAt, els.inputSupervisao, els.inputSemana].forEach(inp => {
         if (!inp) return;
         inp.addEventListener('input', atualizarCabecalho);
         inp.addEventListener('change', atualizarCabecalho);
