@@ -255,7 +255,7 @@
         });
 
         const partes = [];
-        partes.push(`Criança: <strong>${crianca ? esc(crianca) : '—'}</strong>`);
+        partes.push(`Paciente: <strong>${crianca ? esc(crianca) : '—'}</strong>`);
         partes.push(`AT: <strong>${at ? esc(at) : '—'}</strong>`);
         partes.push(`Supervisora: <strong>${supervisao ? esc(supervisao) : '—'}</strong>`);
         if (datas) {
