@@ -1547,15 +1547,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
     flex: 1;
     width: 100%;
     min-height: 88px;
-    padding: 0 2px;
+    padding: 0 4px;
     border: none;
+    border-bottom: 1.5px dashed var(--dia-borda);
     outline: none;
     resize: vertical;
-    background: transparent repeating-linear-gradient(to bottom, transparent 0, transparent 21px, var(--dia-borda) 21px, var(--dia-borda) 22px);
+    background: transparent;
     font: inherit;
     font-size: 12px;
     line-height: 22px;
     color: #4A4266;
+    -webkit-appearance: none;
+    appearance: none;
 }
 .obs-textarea::placeholder { color: #A9A1C4; font-style: italic; }
 
@@ -1767,13 +1770,22 @@ button, input, select, textarea { font: inherit; color: inherit; }
     }
     .bloco-obs .coracao { font-size: 6.5pt !important; line-height: 3.5mm !important; }
     .obs-textarea {
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        background-image: none !important;
+        border: none !important;
+        border-bottom: 0.25mm solid var(--dia-borda) !important;
+        color: #4A4266 !important;
         min-height: 10mm !important;
         height: 10mm !important;
         font-size: 6pt !important;
         line-height: 3.4mm !important;
         resize: none !important;
         overflow: hidden !important;
-        background: transparent repeating-linear-gradient(to bottom, transparent 0, transparent 3.15mm, var(--dia-borda) 3.15mm, var(--dia-borda) 3.4mm) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
     .obs-textarea::placeholder { color: transparent !important; }
 }
