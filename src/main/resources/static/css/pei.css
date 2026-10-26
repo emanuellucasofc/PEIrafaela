@@ -1588,7 +1588,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
     .toolbar-controls .input-semana-toolbar { width: 100%; min-width: 0; min-height: 42px; }
 }
 
-/* ------------------------------------------------------------------ Impressão: A4 paisagem (1 página única garantida) */
+/* ------------------------------------------------------------------ Impressão: A4 paisagem */
 
 @page {
     size: A4 landscape;
@@ -1597,14 +1597,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 @media print {
     html, body {
-        width: 100% !important;
-        height: 100% !important;
-        min-height: 0 !important;
-        max-height: 100% !important;
+        background: #fff !important;
         margin: 0 !important;
         padding: 0 !important;
-        overflow: hidden !important;
-        background: #fff !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
@@ -1621,8 +1619,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
         padding: 0 !important;
         margin: 0 !important;
         width: 100% !important;
-        max-height: 100% !important;
-        overflow: hidden !important;
+        height: auto !important;
+        overflow: visible !important;
     }
     .semana-sheet {
         max-width: none !important;
@@ -1634,13 +1632,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
         background: #fff !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
-        overflow: hidden !important;
+        height: auto !important;
+        overflow: visible !important;
     }
     .semana-header {
         flex-direction: row !important;
         align-items: center !important;
         padding: 1.8mm 5mm 1.4mm !important;
         border-radius: 2.5mm !important;
+        break-after: avoid !important;
+        page-break-after: avoid !important;
     }
     .semana-titulo {
         font-size: 20pt !important;
@@ -1677,12 +1678,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
         overflow: visible !important;
         padding: 1.2mm 0 0 !important;
         margin: 0 !important;
+        break-before: avoid !important;
+        page-break-before: avoid !important;
     }
     .semana-grid {
         min-width: 0 !important;
         width: 100% !important;
         grid-template-columns: 20mm repeat(5, minmax(0, 1fr)) !important;
         gap: 1mm !important;
+        break-before: avoid !important;
+        page-break-before: avoid !important;
     }
     .sem-label {
         position: static !important;
@@ -1694,6 +1699,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
         border-radius: 1.8mm !important;
         font-size: 5.8pt !important;
         box-shadow: none !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
     }
     .sem-label-texto { align-items: center !important; gap: .2mm !important; }
     .sem-label-texto small { font-size: 4.8pt !important; }
@@ -1706,6 +1713,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
         border-radius: 1.8mm !important;
         font-size: 7.2pt !important;
         gap: 1.2mm !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
     }
     .dia-head .coracao { font-size: 7.5pt !important; }
     .dia-head .dia-data { font-size: 6pt !important; }
@@ -1715,6 +1724,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
         border-radius: 1.8mm !important;
         border-width: .25mm !important;
         min-height: 16mm !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
     }
     .lista-1col { gap: .8mm !important; }
     .slot {
@@ -1722,6 +1733,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
         gap: .8mm !important;
         font-size: 7pt !important;
         align-items: flex-start !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
     }
     .slot-num {
         min-width: 3mm !important;
@@ -1749,6 +1762,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
     .bloco-obs {
         min-height: 12mm !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
     }
     .bloco-obs .coracao { font-size: 6.5pt !important; line-height: 3.5mm !important; }
     .obs-textarea {
