@@ -1588,18 +1588,23 @@ button, input, select, textarea { font: inherit; color: inherit; }
     .toolbar-controls .input-semana-toolbar { width: 100%; min-width: 0; min-height: 42px; }
 }
 
-/* ------------------------------------------------------------------ Impressão: A4 paisagem (1 página única) */
+/* ------------------------------------------------------------------ Impressão: A4 paisagem (1 página única garantida) */
 
 @page {
     size: A4 landscape;
-    margin: 5mm;
+    margin: 4mm 5mm;
 }
 
 @media print {
     html, body {
-        background: #fff !important;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        max-height: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
+        overflow: hidden !important;
+        background: #fff !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
@@ -1608,93 +1613,152 @@ button, input, select, textarea { font: inherit; color: inherit; }
         print-color-adjust: exact !important;
     }
 
-    .no-print, .toolbar, .modal-backdrop, .toasts, .alerta-ofensa-banner, body::before { display: none !important; }
+    .no-print, .toolbar, .modal-backdrop, .toasts, .alerta-ofensa-banner, body::before {
+        display: none !important;
+    }
 
-    .semana-wrapper { padding: 0 !important; }
+    .semana-wrapper {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-height: 100% !important;
+        overflow: hidden !important;
+    }
     .semana-sheet {
         max-width: none !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
         border-radius: 0 !important;
         box-shadow: none !important;
         background: #fff !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
-        overflow: visible !important;
-        break-inside: avoid;
-        page-break-inside: avoid;
+        overflow: hidden !important;
     }
     .semana-header {
         flex-direction: row !important;
         align-items: center !important;
-        padding: 2.5mm 6mm 2mm !important;
-        border-radius: 3mm;
+        padding: 1.8mm 5mm 1.4mm !important;
+        border-radius: 2.5mm !important;
     }
-    .semana-titulo { font-size: 23pt !important; gap: 2.5mm !important; }
-    .coracao-titulo { font-size: 10pt !important; }
-    .semana-sub { font-size: 6.8pt !important; margin: .6mm 0 0 7mm !important; letter-spacing: .2em !important; }
-    .semana-sub .dot { margin: 0 2.5mm !important; }
-    .semana-meta { font-size: 7.5pt !important; margin: .8mm 0 0 7mm !important; }
-    .semana-header-dir { align-self: center !important; gap: 4mm !important; }
-    .semana-frase { font-size: 11pt !important; padding: 0 5mm !important; }
-    .frase-coracao { font-size: 7pt !important; }
-    .frase-raio { top: 1mm; height: 6mm; width: 4mm; }
-    .frase-raio::before, .frase-raio::after { width: 3mm; height: .3mm; }
-    .frase-raio.esq::after, .frase-raio.dir::after { top: 4mm; }
-    .arco-iris svg { width: 22mm !important; height: auto !important; }
+    .semana-titulo {
+        font-size: 20pt !important;
+        line-height: 1 !important;
+        gap: 2mm !important;
+    }
+    .coracao-titulo { font-size: 9pt !important; }
+    .semana-sub {
+        font-size: 6.2pt !important;
+        margin: .4mm 0 0 6mm !important;
+        letter-spacing: .18em !important;
+    }
+    .semana-sub .dot { margin: 0 2mm !important; }
+    .semana-meta {
+        font-size: 7pt !important;
+        margin: .5mm 0 0 6mm !important;
+    }
+    .semana-header-dir {
+        align-self: center !important;
+        gap: 3.5mm !important;
+    }
+    .semana-frase {
+        font-size: 9.5pt !important;
+        line-height: 1.05 !important;
+        padding: 0 4mm !important;
+    }
+    .frase-coracao { font-size: 6.5pt !important; }
+    .frase-raio { top: 1mm; height: 5mm; width: 3.5mm; }
+    .frase-raio::before, .frase-raio::after { width: 2.5mm; height: .3mm; }
+    .frase-raio.esq::after, .frase-raio.dir::after { top: 3.5mm; }
+    .arco-iris svg { width: 18mm !important; height: auto !important; }
 
-    .semana-grid-scroll { overflow: visible !important; padding: 1.8mm 0 0 !important; }
+    .semana-grid-scroll {
+        overflow: visible !important;
+        padding: 1.2mm 0 0 !important;
+        margin: 0 !important;
+    }
     .semana-grid {
         min-width: 0 !important;
         width: 100% !important;
-        grid-template-columns: 22mm repeat(5, minmax(0, 1fr)) !important;
-        gap: 1.4mm !important;
-        break-inside: avoid;
-        page-break-inside: avoid;
+        grid-template-columns: 20mm repeat(5, minmax(0, 1fr)) !important;
+        gap: 1mm !important;
     }
     .sem-label {
         position: static !important;
         flex-direction: column !important;
         text-align: center !important;
-        gap: 1mm !important;
-        padding: 1.5mm 1mm !important;
-        border-radius: 2mm !important;
-        font-size: 6.2pt !important;
+        justify-content: center !important;
+        gap: .6mm !important;
+        padding: 1mm .8mm !important;
+        border-radius: 1.8mm !important;
+        font-size: 5.8pt !important;
         box-shadow: none !important;
     }
-    .sem-label-texto { align-items: center !important; gap: .4mm !important; }
-    .sem-label-texto small { font-size: 5.2pt !important; }
-    .sem-label-icone svg { width: 4.6mm !important; height: 4.6mm !important; }
+    .sem-label-texto { align-items: center !important; gap: .2mm !important; }
+    .sem-label-texto small { font-size: 4.8pt !important; }
+    .sem-label-icone svg { width: 3.8mm !important; height: 3.8mm !important; }
     .sem-label-dia { flex-direction: row !important; }
-    .sem-label-dia .sem-label-texto { font-size: 7pt !important; }
+    .sem-label-dia .sem-label-texto { font-size: 6.5pt !important; }
 
-    .dia-head { padding: 1.6mm 1mm !important; border-radius: 2mm !important; font-size: 7.8pt !important; gap: 1.5mm !important; }
-    .dia-head .coracao { font-size: 8pt !important; }
-    .dia-head .dia-data { font-size: 6.5pt !important; }
+    .dia-head {
+        padding: 1.2mm .8mm !important;
+        border-radius: 1.8mm !important;
+        font-size: 7.2pt !important;
+        gap: 1.2mm !important;
+    }
+    .dia-head .coracao { font-size: 7.5pt !important; }
+    .dia-head .dia-data { font-size: 6pt !important; }
 
-    .bloco { padding: 1.6mm 1.8mm !important; border-radius: 2mm !important; border-width: .3mm !important; min-height: 22mm !important; }
-    .lista-1col { gap: 1mm !important; }
-    .slot { min-height: 0 !important; gap: 1mm !important; font-size: 7.2pt !important; align-items: flex-start !important; }
-    .slot-num { min-width: 3.4mm !important; font-size: 6.8pt !important; padding-top: .3mm !important; }
-    .slot-check { width: 2.6mm !important; height: 2.6mm !important; margin-top: .6mm !important; border-width: .25mm !important; border-radius: .6mm !important; }
+    .bloco {
+        padding: 1.2mm 1.5mm !important;
+        border-radius: 1.8mm !important;
+        border-width: .25mm !important;
+        min-height: 16mm !important;
+    }
+    .lista-1col { gap: .8mm !important; }
+    .slot {
+        min-height: 0 !important;
+        gap: .8mm !important;
+        font-size: 7pt !important;
+        align-items: flex-start !important;
+    }
+    .slot-num {
+        min-width: 3mm !important;
+        font-size: 6.5pt !important;
+        padding-top: .2mm !important;
+    }
+    .slot-check {
+        width: 2.4mm !important;
+        height: 2.4mm !important;
+        margin-top: .4mm !important;
+        border-width: .2mm !important;
+        border-radius: .5mm !important;
+    }
     .slot-linha {
-        min-height: 3.6mm !important;
-        line-height: 1.25 !important;
-        padding: .5mm 1mm !important;
+        min-height: 3.2mm !important;
+        line-height: 1.2 !important;
+        padding: .4mm .8mm !important;
         white-space: normal !important;
+        word-break: break-word !important;
         overflow: visible !important;
         box-shadow: none !important;
     }
-    .slot-traco .slot-linha { border-bottom-width: .25mm !important; }
+    .slot-traco .slot-linha { border-bottom-width: .2mm !important; }
     .slot-linha::after { display: none !important; }
 
-    .bloco-obs .coracao { font-size: 7pt !important; line-height: 4mm !important; }
+    .bloco-obs {
+        min-height: 12mm !important;
+    }
+    .bloco-obs .coracao { font-size: 6.5pt !important; line-height: 3.5mm !important; }
     .obs-textarea {
-        min-height: 13mm !important;
-        height: 13mm !important;
-        font-size: 6.4pt !important;
-        line-height: 4mm !important;
+        min-height: 10mm !important;
+        height: 10mm !important;
+        font-size: 6pt !important;
+        line-height: 3.4mm !important;
         resize: none !important;
         overflow: hidden !important;
-        background: transparent repeating-linear-gradient(to bottom, transparent 0, transparent 3.75mm, var(--dia-borda) 3.75mm, var(--dia-borda) 4mm) !important;
+        background: transparent repeating-linear-gradient(to bottom, transparent 0, transparent 3.15mm, var(--dia-borda) 3.15mm, var(--dia-borda) 3.4mm) !important;
     }
     .obs-textarea::placeholder { color: transparent !important; }
 }
